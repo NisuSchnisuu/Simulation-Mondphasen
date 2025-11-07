@@ -305,7 +305,7 @@
 
         // --- Konstanten ---
         const SCENE_SCALE = 1.0;
-        const SUN_RADIUS = 5 * SCENE_SCALE; 
+        const SUN_RADIUS = 20 * SCENE_SCALE; 
         const EARTH_RADIUS = 2.5 * SCENE_SCALE;
         const MOON_RADIUS = 0.7 * SCENE_SCALE;
         
@@ -560,8 +560,8 @@
                     }
                     
                     // 4. Rotes Overlay (Blutmond) ZULETZT anwenden
-                    vec3 bloodMoonColor = vec3(1.0, 0.1, 0.0); // Rot
-                    float redMixAmount = uRedOverlayIntensity * sunLightMix * 0.5; // 50% Deckkraft
+                    vec3 bloodMoonColor = vec3(1.0, 0.2, 0.0); // Rot
+                    float redMixAmount = uRedOverlayIntensity * sunLightMix * 0.4; // 50% Deckkraft
                     
                     // Mische das Rot ÜBER die (jetzt abgedunkelte) Farbe
                     finalColor.rgb = mix(finalColor.rgb, bloodMoonColor, redMixAmount);
@@ -609,7 +609,7 @@
 
             // NEU: Sternenhimmel
             const starGeometry = new THREE.SphereGeometry(3000, 32, 32); // Riesige Kugel
-            const starTexture = textureLoader.load('https://threejs.org/examples/textures/starmap.jpg');
+            const starTexture = textureLoader.load('https://cdn.jsdelivr.net/gh/NisuSchnisuu/Simulation-Mondphasen@main/8k_stars.jpg');
             const starMaterial = new THREE.MeshBasicMaterial({
                 map: starTexture,
                 side: THREE.BackSide // Wichtig: Textur auf der Innenseite der Kugel
@@ -617,9 +617,14 @@
             starField = new THREE.Mesh(starGeometry, starMaterial);
             scene.add(starField);
 
-            // 1. Sonne
-            const sunMaterial = new THREE.MeshBasicMaterial({ color: 0xFFFF00 });
-            sun = new THREE.Mesh(new THREE.SphereGeometry(SUN_RADIUS, 32, 32), sunMaterial);
+            // 1. Sonne ohne Texture:
+            //const sunMaterial = new THREE.MeshBasicMaterial({ color: 0xff8112 });
+            //sun = new THREE.Mesh(new THREE.SphereGeometry(SUN_RADIUS, 32, 32), sunMaterial);
+            //scene.add(sun);
+	    // 1.2 Sonne mit Texture:
+	    const sunTexture = textureLoader.load('https://cdn.jsdelivr.net/gh/NisuSchnisuu/Simulation-Mondphasen@main/2k_sun.jpg');
+            const sunMaterial = new THREE.MeshBasicMaterial({ map: sunTexture });
+	    sun = new THREE.Mesh(new THREE.SphereGeometry(SUN_RADIUS, 32, 32), sunMaterial);
             scene.add(sun);
             
             // 2. Erde
@@ -656,7 +661,7 @@
                 vertexShader: moonVertexShader,
                 fragmentShader: moonFragmentShader,
                 uniforms: {
-                    dayTexture: { value: textureLoader.load('https://threejs.org/examples/textures/planets/moon_1024.jpg') },
+                    dayTexture: { value: textureLoader.load('https://cdn.jsdelivr.net/gh/NisuSchnisuu/Simulation-Mondphasen@main/2k_moon.jpg') },
                     uSunPosition: { value: new THREE.Vector3(0, 0, 0) },
                     uEarthPosition: { value: new THREE.Vector3() },
                     uObjectWorldPosition: { value: new THREE.Vector3() },
