@@ -172,20 +172,16 @@
             border: 1px solid #555;
             color: #fff;
             border-radius: 5px;
-            /* Entfernt: padding: 8px 4px; */
-            /* Entfernt: font-size: 10px; */
             cursor: pointer;
             transition: background-color 0.2s ease, border-color 0.2s ease;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-            /* Entfernt: line-height: 0; */
             padding: 5px;
-            height: 42px; /* Angepasste Höhe für die Icons */
+            height: 42px; 
             display: flex;
             align-items: center;
             justify-content: center;
-            /* Neu: Für Emojis */
             font-size: 24px;
             line-height: 1;
         }
@@ -195,15 +191,14 @@
         }
         
         #moon-phases-ui button.active {
-            background: #4A4A4A; /* Angepasster Hintergrund für aktive Phase */
-            border-color: #ffc107; /* Gelber Rand, passend zum Bild */
+            background: #4A4A4A; 
+            border-color: #ffc107; 
             font-weight: bold;
-            box-shadow: 0 0 8px 1px rgba(255, 193, 7, 0.7); /* Hellerer Leuchteffekt */
+            box-shadow: 0 0 8px 1px rgba(255, 193, 7, 0.7); 
         }
 
-        /* Demo-spezifische Steuerung (Regler) */
         #demo-speed-control {
-            display: none; /* Standardmäßig ausgeblendet */
+            display: none; 
             margin-top: 10px;
         }
 
@@ -215,10 +210,8 @@
 
     <div id="ui-container">
         
-        <!-- Minimieren-Knopf -->
         <button id="toggle-ui" class="btn btn-secondary">Verbergen</button>
 
-        <!-- Gruppe: Hauptsteuerung -->
         <div class="control-group">
             <h3>Steuerung</h3>
             <div class="btn-group" style="margin-bottom: 15px;">
@@ -236,24 +229,22 @@
                 Umlaufbahnen anzeigen
             </label>
             
-            <!-- NEUES KÄSTCHEN: Absolute Dunkelheit -->
-            <label class="checkbox-label" style="margin-top: 10px;">
-                <input type="checkbox" id="darkness-checkbox">
-                Absolute Dunkelheit
-            </label>
+            <!-- KORREKTUR: Checkbox durch Slider ersetzt -->
+            <label for="darkness-slider" style="margin-top: 10px;">Helligkeit (Nachtseite): <span id="darkness-label">0.30</span></label>
+            <input type="range" id="darkness-slider" min="0" max="0.9" value="0.3" step="0.01">
         </div>
 
-        <!-- Gruppe: Kamera -->
         <div class="control-group">
             <h3>Kamera-Fokus</h3>
             <div class="btn-group">
                 <button id="focus-system" class="btn btn-secondary">Sonnensystem</button>
                 <button id="focus-earth" class="btn btn-secondary">Erde</button>
                 <button id="focus-moon" class="btn btn-secondary">Mond</button>
+                <!-- NEU: Ekliptik-Sicht Button -->
+                <button id="focus-ecliptic" class="btn btn-secondary">Ekliptik-Sicht</button>
             </div>
         </div>
 
-        <!-- Gruppe: Ereignisse -->
         <div class="control-group">
             <h3>Ereignisse</h3>
             <div class="btn-group" id="demo-buttons">
@@ -264,7 +255,6 @@
                 <button id="end-demo-btn" class="btn btn-danger">Demo beenden</button>
             </div>
             
-            <!-- Demo-Geschwindigkeitsregler (wird per JS ein/ausgeblendet) -->
             <div id="demo-speed-control">
                  <label for="demo-speed-slider" style="margin-top: 10px;">Demo-Geschw.: <span id="demo-speed-label">1.0</span>x</label>
                  <input type="range" id="demo-speed-slider" min="0" max="100" value="50" step="1">
@@ -273,10 +263,8 @@
             <div id="info-box">Tag: 0</div>
         </div>
 
-        <!-- Gruppe: Mondphasen -->
         <div class="control-group">
             <h3>Mondphasen</h3>
-            <!-- Emojis für Mondphasen -->
             <div id="moon-phases-ui">
                 <button id="phase-0" data-phase-index="0" class="moon-phase-btn" title="Neumond (Springen)">🌑</button>
                 <button id="phase-1" data-phase-index="1" class="moon-phase-btn" title="Zunehmende Sichel (Springen)">🌒</button>
@@ -295,7 +283,7 @@
         let scene, camera, renderer, controls;
         let sun, earth, moon, earthPivot, moonPivot;
         let earthOrbitLine, moonOrbitLine;
-        let umbra, penumbra; // Für SoFi-Schatten auf der Erde
+        let starField; // NEU: Für Sternenhimmel
         
         let isPlaying = true;
         let currentDay = 0;
@@ -309,15 +297,15 @@
         // Demo-spezifische Variablen
         let demoLoopStartDay = 0;
         let demoLoopEndDay = 0;
-        let demoLoopSpeed = 0.1; // Standard-Demo-Geschwindigkeit
-        let demoType = ''; // 'sofi' oder 'mofi'
-        let demoShadowBrightness = 0.0; // Helligkeit des Schattens (0.0 = 100% Schwarz)
-        let demoRedOverlay = 0.0; // Deckkraft des roten Overlays
-        let earthDemoRotationOffset = 0.5; // Neu: Für manuelle Rotation der Erde in Demos
+        let demoLoopSpeed = 0.1; 
+        let demoType = ''; 
+        let demoShadowBrightness = 0.0; 
+        let demoRedOverlay = 0.0; 
+        let earthDemoRotationOffset = 0.0; // Für manuelle Rotation der Erde in Demos
 
         // --- Konstanten ---
         const SCENE_SCALE = 1.0;
-        const SUN_RADIUS = 5 * SCENE_SCALE; // KORRIGIERT: Kleinere Sonne
+        const SUN_RADIUS = 5 * SCENE_SCALE; 
         const EARTH_RADIUS = 2.5 * SCENE_SCALE;
         const MOON_RADIUS = 0.7 * SCENE_SCALE;
         
@@ -325,16 +313,13 @@
         const MOON_DISTANCE = 15 * SCENE_SCALE;
 
         const EARTH_TILT_RAD = (23.5 * Math.PI) / 180;
-        const MOON_TILT_RAD = (5.1 * Math.PI) / 180; // Neigung der Mondbahn relativ zur Ekliptik
+        const MOON_TILT_RAD = (5.1 * Math.PI) / 180; 
 
         const EARTH_YEAR_DAYS = 365.25;
-        const LUNAR_MONTH_DAYS = 29.53; // Synodischer Monat (von Neumond zu Neumond)
+        const LUNAR_MONTH_DAYS = 29.53; 
         
-        // KORREKTUR: Offset, um monatliche Finsternisse zu verhindern
         const PHASE_OFFSET_DAYS = 5; 
         
-        // Konstanten für die Phasen-Navigation (KORRIGIERT laut deinem Bild)
-        // Diese Map steuert, zu welchem Tag "gesprungen" wird
         const PHASE_DAY_MAP = [
             LUNAR_MONTH_DAYS * 0.02  + PHASE_OFFSET_DAYS, // Neumond
             LUNAR_MONTH_DAYS * 0.145 + PHASE_OFFSET_DAYS, // Zun. Sichel (Index 1)
@@ -355,7 +340,11 @@
         const speedLabel = document.getElementById('speed-label');
         const orbitCheckbox = document.getElementById('orbit-checkbox');
         const infoBox = document.getElementById('info-box');
-        const darknessCheckbox = document.getElementById('darkness-checkbox'); // Neu
+        // const darknessCheckbox = document.getElementById('darkness-checkbox'); // KORREKTUR: Entfernt, da ID nicht existiert
+        
+        // NEU: Slider für Dunkelheit
+        const darknessSlider = document.getElementById('darkness-slider');
+        const darknessLabel = document.getElementById('darkness-label');
 
         const demoButtons = document.getElementById('demo-buttons');
         const demoControlButtons = document.getElementById('demo-control-buttons');
@@ -365,7 +354,6 @@
         const demoSpeedLabel = document.getElementById('demo-speed-label');
         
         // --- Shader (Erde) ---
-        // Dieser Shader ignoriert die Objektrotation für die Beleuchtung
         const earthVertexShader = `
             varying vec2 vUv;
             varying vec3 vWorldPosition;
@@ -380,10 +368,52 @@
             uniform sampler2D dayTexture;
             uniform vec3 uSunPosition;         // Position der Sonne (Weltkoordinaten)
             uniform vec3 uObjectWorldPosition; // Position des Objekt-Zentrums (Weltkoordinaten)
-            uniform float uNightBrightness;    // NEU: 0.3 oder 0.07
+            uniform float uNightBrightness;    // 0.3 oder 0.07
+            
+            // NEU FÜR SOFI SHADER
+            uniform bool uSofiDemoActive;      // Ist SoFi-Demo aktiv?
+            uniform vec3 uMoonPosition;
+            uniform float uMoonRadius;
+            uniform float uSunRadius;
             
             varying vec2 vUv;
             varying vec3 vWorldPosition;
+            
+            // NEU: Helper-Funktion für SoFi (kopiert von MoFi, Radien angepasst)
+            // Berechnet Helligkeit (0.0 = Schatten, 1.0 = Licht)
+            float calculateMoonShadowIntensity(vec3 pixelPos, vec3 moonPos, float moonRadius, vec3 sunPos, float sunRadius) {
+                
+                vec3 sunToMoon = moonPos - sunPos;
+                vec3 shadowAxis = normalize(sunToMoon);
+
+                vec3 sunToPixel = pixelPos - sunPos;
+                
+                float depthInShadow = dot(sunToPixel, shadowAxis);
+                if (depthInShadow < 0.0) return 1.0; 
+
+                vec3 closestPointOnAxis = sunPos + shadowAxis * depthInShadow;
+                
+                float pixelDistanceToAxis = distance(pixelPos, closestPointOnAxis);
+
+                // --- HIER KANN GRÖSSE/DECKKRAFT (SoFi) ANGEPASST WERDEN ---
+                // Kernschatten (Umbra)
+                float umbraRadius = moonRadius * 0.1; // Z.B. 50% des Mondradius
+                
+                // Halbschatten (Penumbra)
+                float penumbraRadius = moonRadius * 1.0; // Z.B. 150% des Mondradius
+
+                if (pixelDistanceToAxis > penumbraRadius) {
+                    return 1.0; // Volles Licht
+                }
+
+                if (pixelDistanceToAxis < umbraRadius) {
+                    return 0.0; // Kernschatten (100% Schwarz)
+                }
+
+                // Halbschatten (Linearer Übergang)
+                float progress = (pixelDistanceToAxis - umbraRadius) / (penumbraRadius - umbraRadius);
+                return mix(0.4, 0.9, progress); // 0.0 (Schatten) -> 1.0 (Licht)
+            }
             
             void main() {
                 vec3 objectToSun = normalize(uSunPosition - uObjectWorldPosition);
@@ -391,19 +421,37 @@
                 
                 float intensity = (dot(objectToFragment, objectToSun) + 1.0) / 2.0;
                 
-                float nightBrightness = uNightBrightness; // 30% Helligkeit für die Nachtseite
-                float lightMix = smoothstep(0.48, 0.59, intensity); // Scharfe Grenze
+                float nightBrightness = uNightBrightness;
+                float lightMix = smoothstep(0.48, 0.59, intensity); // Weichere Grenze
                 
                 vec4 dayColor = texture2D(dayTexture, vUv);
                 vec4 nightColor = dayColor * nightBrightness;
                 
                 vec4 finalColor = mix(nightColor, dayColor, lightMix);
+
+                // --- SoFi-Schatten Logik (NEU) ---
+                if (uSofiDemoActive) {
+                    // Berechne den Mondschatten nur, wenn der Pixel auf der Tagseite ist
+                    if (intensity > 0.01) { 
+                        float moonShadowIntensity = calculateMoonShadowIntensity(
+                            vWorldPosition, 
+                            uMoonPosition, 
+                            uMoonRadius,
+                            uSunPosition,
+                            uSunRadius
+                        );
+                        
+                        // Wende die Schwärzung des Mondschattens an
+                        // (0.0 = Schwarz, 1.0 = Volles Licht)
+                        finalColor.rgb *= moonShadowIntensity;
+                    }
+                }
+
                 gl_FragColor = finalColor;
             }
         `;
         
         // --- Shader (Mond) ---
-        // Dieser Shader kann zusätzlich den Erdschatten (MoFi) darstellen
         const moonVertexShader = `
             varying vec2 vUv;
             varying vec3 vWorldPosition;
@@ -456,25 +504,19 @@
                 float pixelDistanceToAxis = distance(pixelPos, closestPointOnAxis);
 
                 // --- Didaktisch vereinfachtes Modell (feste Radien) ---
-                // Wir nutzen den Erdradius als Basis für den Schatten
                 float umbraRadius = uEarthRadius * 0.9; // Kernschatten (ca. 90% der Erde)
                 
-         
-        
                 // KORREKTUR: Halbschatten (Penumbra) drastisch reduziert (scharfe Kante)
-                float penumbraRadius = umbraRadius * 1.01; // Sehr schmaler Halbschatten
-
-                if (pixelDistanceToAxis > penumbraRadius) {
-                    return 1.0; // 1. Außerhalb des Halbschattens (Volles Licht)
-                }
-
-                if (pixelDistanceToAxis < umbraRadius) {
-                    return 0.0; // 2. Im Kernschatten (Umbra)
-                }
-
-                // 3. Im Halbschatten: Übergang von 1.0 (Licht) zu 0.0 (Schatten)
-                float progress = (pixelDistanceToAxis - umbraRadius) / (penumbraRadius - umbraRadius);
-                return mix(0.0, 1.0, progress); // Linearer Übergang von 0.0 (Umbra) zu 1.0 (Licht)
+                // float penumbraRadius = umbraRadius * 1.01; // Sehr schmaler Halbschatten
+                
+                // NEU: Weiche Kante mit smoothstep
+                float startRatio = 0.95; 
+                float endRatio = 1.05;   
+                
+                // WICHTIG: smoothstep glättet den Übergang von 0.0 (Schatten) zu 1.0 (Licht)
+                float intensity = smoothstep(umbraRadius * startRatio, umbraRadius * endRatio, pixelDistanceToAxis);
+                
+                return intensity; 
             }
 
             void main() {
@@ -485,21 +527,18 @@
                 vec3 objectToFragment = normalize(vWorldPosition - uObjectWorldPosition);
                 float sunLightIntensity = (dot(objectToFragment, objectToSun) + 1.0) / 2.0;
                 float nightBrightness = uNightBrightness; // KORRIGIERT
-                float sunLightMix = smoothstep(0.48, 0.59, sunLightIntensity);
+                float sunLightMix = smoothstep(0.5, 0.6, sunLightIntensity); // KORRIGIERT: Weichere Grenze
                 
                 vec4 sunLitColor = mix(textureColor * nightBrightness, textureColor, sunLightMix);
 
                 // Nur wenn die MoFi-Demo aktiv ist, berechne Schatten und Rot
                 if (uDemoActive) {
-                    // 2. Rotes Overlay (Blutmond)
-                    vec3 bloodMoonColor = vec3(1.0, 0.1, 0.0); // Rot
-                    // KORREKTUR: 10% transparenter (50% Deckkraft)
-                    float redMixAmount = uRedOverlayIntensity * sunLightMix * 0.5; // 50% Deckkraft
-                    vec3 redOverlayColor = mix(sunLitColor.rgb, bloodMoonColor, redMixAmount);
+                    // KORRIGIERTE REIHENFOLGE
                     
-                    vec4 finalColor = vec4(redOverlayColor, 1.0);
+                    // 1. Beginne mit der Tag/Nacht-Farbe
+                    vec4 finalColor = vec4(sunLitColor.rgb, 1.0); // Startet mit Tag/Nacht
 
-                    // 3. Erdschatten-Berechnung (MoFi)
+                    // 2. Erdschatten-Berechnung (MoFi)
                     float earthShadowIntensity = calculateShadowIntensity(
                         vWorldPosition, 
                         uEarthPosition, 
@@ -508,21 +547,24 @@
                         uSunRadius
                     );
 
-                    // 4. Wende den Erdschatten AN
-                    
-                    // Logik:
-                    // 2. Im Kernschatten ODER Halbschatten (Umbra und Penumbra)
-                    if (earthShadowIntensity < 1.0) { // NEU: Wenn es IRGENDEINEN Schatten gibt (< 1.0)
-                        // Die Helligkeitsreduzierung wird nur auf die von der Sonne beleuchtete Seite angewendet.
-                         float shadowAmount = (1.0 - earthShadowIntensity);
-                        // Der Kernschatten ist 100% Deckkraft (wird zu 0.0)
-                        finalColor.rgb = mix(finalColor.rgb, finalColor.rgb * uShadowBrightness, sunLightMix);
+                    // 3. Wende den Erdschatten (Abdunklung) AN
+                    if (earthShadowIntensity < 1.0) { // Wenn IRGENDEIN Schatten vorhanden ist
                         
-                        // Der Rot-Effekt wird auch nur auf der beleuchteten (Tag-)Seite angewendet,
-                        // was im Schritt 2 (Red Overlay) bereits durch 'sunLightMix' im RedMixAmount geschieht.
+                        if (earthShadowIntensity == 0.0) {
+                            // Im Kernschatten (Umbra): Wende die Helligkeit (z.B. 0.05) NUR auf die Tagseite an
+                            finalColor.rgb = mix(finalColor.rgb, finalColor.rgb * uShadowBrightness, sunLightMix);
+                        } else {
+                            // Im Halbschatten (Penumbra): Abdunklung nur auf die Tagseite des Mondes anwenden
+                             finalColor.rgb *= (1.0 - (1.0 - earthShadowIntensity) * sunLightMix); 
+                        }
                     }
                     
-                   
+                    // 4. Rotes Overlay (Blutmond) ZULETZT anwenden
+                    vec3 bloodMoonColor = vec3(1.0, 0.1, 0.0); // Rot
+                    float redMixAmount = uRedOverlayIntensity * sunLightMix * 0.5; // 50% Deckkraft
+                    
+                    // Mische das Rot ÜBER die (jetzt abgedunkelte) Farbe
+                    finalColor.rgb = mix(finalColor.rgb, bloodMoonColor, redMixAmount);
                     
                     gl_FragColor = finalColor;
 
@@ -565,6 +607,16 @@
         function createSolarSystem() {
             const textureLoader = new THREE.TextureLoader();
 
+            // NEU: Sternenhimmel
+            const starGeometry = new THREE.SphereGeometry(3000, 32, 32); // Riesige Kugel
+            const starTexture = textureLoader.load('https://threejs.org/examples/textures/starmap.jpg');
+            const starMaterial = new THREE.MeshBasicMaterial({
+                map: starTexture,
+                side: THREE.BackSide // Wichtig: Textur auf der Innenseite der Kugel
+            });
+            starField = new THREE.Mesh(starGeometry, starMaterial);
+            scene.add(starField);
+
             // 1. Sonne
             const sunMaterial = new THREE.MeshBasicMaterial({ color: 0xFFFF00 });
             sun = new THREE.Mesh(new THREE.SphereGeometry(SUN_RADIUS, 32, 32), sunMaterial);
@@ -581,7 +633,12 @@
                     dayTexture: { value: textureLoader.load('https://threejs.org/examples/textures/planets/earth_atmos_2048.jpg') },
                     uSunPosition: { value: new THREE.Vector3(0, 0, 0) },
                     uObjectWorldPosition: { value: new THREE.Vector3() },
-                    uNightBrightness: { value: 0.3 } // NEU
+                    uNightBrightness: { value: 0.3 }, 
+                    // NEU FÜR SOFI SHADER
+                    uSofiDemoActive: { value: false },
+                    uMoonPosition: { value: new THREE.Vector3() },
+                    uMoonRadius: { value: MOON_RADIUS },
+                    uSunRadius: { value: SUN_RADIUS } 
                 }
             });
             earth = new THREE.Mesh(new THREE.SphereGeometry(EARTH_RADIUS, 32, 32), earthMaterial);
@@ -591,11 +648,9 @@
             earthPivot.add(earth);
 
             // 3. Mond
-            // KORREKTUR (Monatliche Finsternis): moonPivot ist jetzt ein Kind der SCENE
             moonPivot = new THREE.Group();
-            // moonPivot.position.x = EARTH_DISTANCE; // Entfernt
             moonPivot.rotation.x = MOON_TILT_RAD; 
-            scene.add(moonPivot); // KORREKTUR
+            scene.add(moonPivot); 
 
             originalMoonMaterial = new THREE.ShaderMaterial({
                 vertexShader: moonVertexShader,
@@ -608,34 +663,17 @@
                     uEarthRadius: { value: EARTH_RADIUS },
                     uSunRadius: { value: SUN_RADIUS },
                     uMoonRadius: { value: MOON_RADIUS },
-                    uNightBrightness: { value: 0.3 }, // NEU
-                    uDemoActive: { value: false }, // Wichtig: Standardmäßig aus
-                    uShadowBrightness: { value: 0.0 }, // 100% Schwarz
-                    uRedOverlayIntensity: { value: 0.0 } // 0% Rot
+                    uNightBrightness: { value: 0.3 },
+                    uDemoActive: { value: false },
+                    uShadowBrightness: { value: 0.0 }, 
+                    uRedOverlayIntensity: { value: 0.0 } 
                 }
             });
             moon = new THREE.Mesh(new THREE.SphereGeometry(MOON_RADIUS, 32, 32), originalMoonMaterial);
-            moon.position.x = -MOON_DISTANCE; // Position, damit Neumond Sonne-Mond-Erde ist
+            moon.position.x = -MOON_DISTANCE; 
             moonPivot.add(moon);
             
-            // 4. SoFi-Schatten (auf der Erde)
-            // Umbra (total)
-            umbra = new THREE.Mesh(
-                new THREE.CircleGeometry(MOON_RADIUS * 0.2, 32), // Größe des Kernschattens anpassen
-                new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.9 })
-            );
-            // Penumbra (partiell)
-            penumbra = new THREE.Mesh(
-                new THREE.CircleGeometry(MOON_RADIUS * 1.5, 32), // Größe des Halbschattens anpassen
-                new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.3 })
-            );
-            
-            umbra.visible = false;
-            penumbra.visible = false;
-            
-            // Schatten werden an die Erde geheftet
-            earth.add(umbra);
-            earth.add(penumbra);
+            // 4. SoFi-Schatten (auf der Erde) - ENTFERNT (jetzt im Shader)
         }
 
         // --- Umlaufbahnen (Linien) ---
@@ -655,21 +693,35 @@
             scene.add(earthOrbitLine);
 
             moonOrbitLine = createOrbitLine(MOON_DISTANCE, 0xFFFF00);
-            // KORREKTUR (Monatliche Finsternis): Mond-Linie ist jetzt ein Kind der SCENE
-            // moonOrbitLine.position.x = EARTH_DISTANCE; // Entfernt
             moonOrbitLine.rotation.x = MOON_TILT_RAD; 
-            scene.add(moonOrbitLine); // KORREKTUR
+            scene.add(moonOrbitLine); 
         }
 
         // --- UI-Einrichtung ---
         function setupUI() {
-            const uiContainer = document.getElementById('ui-container');
+            //Verbergen Button toggle
+             const uiContainer = document.getElementById('ui-container');
             const toggleBtn = document.getElementById('toggle-ui');
             toggleBtn.addEventListener('click', () => {
                 uiContainer.classList.toggle('minimized');
                 toggleBtn.textContent = uiContainer.classList.contains('minimized') ? 'Anzeigen' : 'Verbergen';
             });
-
+            //Orbit Checkbox
+            orbitCheckbox.addEventListener('change', (e) => {
+                earthOrbitLine.visible = e.target.checked;
+                moonOrbitLine.visible = e.target.checked;
+            });
+            // NEU: Event-Listener für Dunkelheits-Slider
+            darknessSlider.addEventListener('input', (e) => {
+                const brightness = parseFloat(e.target.value);
+                earth.material.uniforms.uNightBrightness.value = brightness;
+                originalMoonMaterial.uniforms.uNightBrightness.value = brightness;
+                darknessLabel.textContent = brightness.toFixed(2);
+            });
+            //Speedslider Fix
+            speedSlider.addEventListener('input', onSpeedSliderChange);
+            onSpeedSliderChange(); 
+            //Play Button fix
             playPauseBtn.addEventListener('click', togglePlay);
             daySlider.addEventListener('input', () => {
                 pauseSimulation();
@@ -677,31 +729,38 @@
                 updatePositions(currentDay);
                 updateUI();
             });
+            // Initialwert setzen
+            const initialBrightness = parseFloat(darknessSlider.value);
+            earth.material.uniforms.uNightBrightness.value = initialBrightness;
+            originalMoonMaterial.uniforms.uNightBrightness.value = initialBrightness;
+            darknessLabel.textContent = initialBrightness.toFixed(2);
 
-            speedSlider.addEventListener('input', onSpeedSliderChange);
-            onSpeedSliderChange(); 
-
-            orbitCheckbox.addEventListener('change', (e) => {
-                earthOrbitLine.visible = e.target.checked;
-                moonOrbitLine.visible = e.target.checked;
-            });
-            
-            // NEU: Event-Listener für Dunkelheit
-            darknessCheckbox.addEventListener('change', (e) => {
-                const brightness = e.target.checked ? 0.001 : 0.2; // KORRIGIERT auf 0.07
-                earth.material.uniforms.uNightBrightness.value = brightness;
-                originalMoonMaterial.uniforms.uNightBrightness.value = brightness;
-            });
 
             document.getElementById('focus-system').addEventListener('click', () => setFocus('system'));
             document.getElementById('focus-earth').addEventListener('click', () => setFocus('earth'));
             document.getElementById('focus-moon').addEventListener('click', () => setFocus('moon'));
 
+            // NEU: Listener für Ekliptik-Sicht
+            document.getElementById('focus-ecliptic').addEventListener('click', () => {
+                cameraFocus = 'ecliptic_side_view'; // NEUER Modus
+                
+                let earthPos = new THREE.Vector3();
+                earth.getWorldPosition(earthPos);
+                
+                // KORREKTUR: Kamera blickt auf die Sonne (0,0,0)
+                controls.target.set(0, 0, 0); 
+                
+                // KORREKTUR: Kamera ist auf Augenhöhe (Y=0) auf der Erdumlaufbahn
+                let offset = earthPos.clone().normalize().multiplyScalar(40); // KORRIGIERT: 40 Einheiten "hinter" der Erde
+                let sideOffset = new THREE.Vector3(-earthPos.z, 0, earthPos.x).normalize().multiplyScalar(4); // KORRIGIERT: 4 Einheiten "seitlich"
+                
+                camera.position.copy(earthPos).add(offset).add(sideOffset); // Position = Erde + Hinten + Seitlich
+            });
+
             document.getElementById('demo-sofi').addEventListener('click', () => startDemo('sofi'));
             document.getElementById('demo-mofi').addEventListener('click', () => startDemo('mofi'));
             endDemoBtn.addEventListener('click', endDemo);
             
-            // Demo-Geschwindigkeitsregler
             demoSpeedSlider.addEventListener('input', onDemoSpeedSliderChange);
             onDemoSpeedSliderChange();
 
@@ -718,8 +777,7 @@
             isPlaying = !isPlaying;
             playPauseBtn.textContent = isPlaying ? 'Pause' : 'Play';
             
-            // NEU: Zoom soll IMMER aktiv sein (da der Drift jetzt stabil ist)
-            controls.enableZoom = true; // <--- JETZT IST DER ZOOM IMMER AN
+            controls.enableZoom = true; // Zoom ist IMMER an
         }
 
         function pauseSimulation() {
@@ -743,7 +801,7 @@
         }
         
         function onDemoSpeedSliderChange() {
-            const value = parseFloat(demoSpeedSlider.value); // 0-100
+            const value = parseFloat(demoSpeedSlider.value); 
             const minSpeed = 0.01;
             const normalSpeed = 0.1;
             const maxSpeed = 1.0;
@@ -757,7 +815,7 @@
         }
 
         function setFocus(target) {
-            cameraFocus = target; // Setze den globalen Fokus-Status
+            cameraFocus = target; 
             let targetObj;
             let zoomFactor = 1.0;
 
@@ -775,41 +833,32 @@
             const targetPos = new THREE.Vector3();
             targetObj.getWorldPosition(targetPos);
             
-            // Berechne einen Kamera-Offset relativ zur aktuellen Blickrichtung
             const offset = camera.position.clone().sub(controls.target).normalize().multiplyScalar(EARTH_DISTANCE / zoomFactor);
             camera.position.copy(targetPos).add(offset);
             controls.target.copy(targetPos);
             lastCameraTargetPos.copy(targetPos);
 
-            // NEU: Zoom-Status beim Wechseln des Fokus. Wir halten ihn IMMER aktiv.
             controls.enableZoom = true;
         }
 
         function resetToRealMode() {
             isDemoActive = false;
             demoType = '';
-            // KORREKTUR: Simulation nicht automatisch starten
-            // isPlaying = true; // Nach Demo wieder normal spielen lassen
-            // playPauseBtn.textContent = 'Pause';
             controls.enableZoom = true;
 
-            // UI-Anzeige zurücksetzen
             demoButtons.style.display = 'flex';
             demoControlButtons.style.display = 'none';
             demoSpeedControl.style.display = 'none';
 
-            // Rotationen zurücksetzen
             earth.rotation.z = EARTH_TILT_RAD;
-            moonPivot.rotation.x = MOON_TILT_RAD; // KORREKTUR: Dies ist die Neigung der BAHN
+            earth.rotation.x = 0; 
+            moonPivot.rotation.x = MOON_TILT_RAD; 
             
-            // Schatten auf der Erde (SoFi) ausblenden
-            umbra.visible = false;
-            penumbra.visible = false;
+            // NEU: SoFi-Shader deaktivieren
+            earth.material.uniforms.uSofiDemoActive.value = false;
             
-            // Mond-Material zurücksetzen und Finsternis-Shader deaktivieren
-            moon.material = originalMoonMaterial;
             if (moon.material.uniforms) {
-                originalMoonMaterial.uniforms.uDemoActive.value = false; // Demo aus
+                originalMoonMaterial.uniforms.uDemoActive.value = false; 
                 originalMoonMaterial.uniforms.uShadowBrightness.value = 0.0;
                 originalMoonMaterial.uniforms.uRedOverlayIntensity.value = 0.0;
             }
@@ -817,58 +866,55 @@
         
         // --- Demo-Start ---
         function startDemo(type) {
-            pauseSimulation(); // Zuerst normale Simulation pausieren
-            resetToRealMode(); // Alles zurücksetzen
+            pauseSimulation(); 
+            resetToRealMode(); 
             
             isDemoActive = true;
             demoType = type;
-            isPlaying = true; // Demo soll abspielen
+            isPlaying = true; 
             playPauseBtn.textContent = 'Pause';
-            controls.enableZoom = true; // KORREKTUR: Zoomen in Demo erlauben
+            controls.enableZoom = true; 
 
-            demoButtons.style.display = 'none'; // Normale Demo-Buttons ausblenden
-            demoControlButtons.style.display = 'flex'; // "Demo beenden" Button einblenden
-            demoSpeedControl.style.display = 'block'; // Demo-Geschw.-Regler einblenden
-
-            // Rotationen für die Demo anpassen (Finsternis muss in der Ekliptik sein)
-             
-            earth.rotation.z = -EARTH_TILT_RAD; // Erdachse auf -23.5 Grad spiegeln 
-            moonPivot.rotation.x = 0; // KORREKTUR: Neigung der BAHN auf 0
+            demoButtons.style.display = 'none'; 
+            demoControlButtons.style.display = 'flex'; 
+            demoSpeedControl.style.display = 'block'; 
+            
+            // NEU: Erdrotation (z) wird für SoFi gespiegelt
+            if (type === 'sofi') {
+                earth.rotation.z = -EARTH_TILT_RAD;
+            } else {
+                earth.rotation.z = 0;
+            }
+            
+            
             
             let demoDurationDays;
 
             if (type === 'sofi') {
-                demoDurationDays = 0.5; // 12 Stunden für SoFi
-                currentDay = LUNAR_MONTH_DAYS * 0.0 - (demoDurationDays / 2); // Start vor Neumond
+                demoDurationDays = 2; 
+                currentDay = LUNAR_MONTH_DAYS * 0.0 - (demoDurationDays / 2); 
                 demoLoopStartDay = currentDay;
-                demoLoopEndDay = LUNAR_MONTH_DAYS * 0.0 + (demoDurationDays / 2); // Ende nach Neumond
+                demoLoopEndDay = LUNAR_MONTH_DAYS * 0.0 + (demoDurationDays / 2); 
                 
-                // Schatten auf der Erde einblenden
-                umbra.visible = true;
-                penumbra.visible = true;
+                // NEU: SoFi-Shader aktivieren
+                earth.material.uniforms.uSofiDemoActive.value = true;
                 
-                // NEU: Setze den Rotations-Offset auf ~202.5 Grad, um den Schatten nach Europa zu verschieben
-                earthDemoRotationOffset = 2.3 + Math.PI / 8; // 180 Grad + 22.5 Grad
-                // (WICHTIG: Setzt den Offset auf dem Mondanker, um den Schatten zu verschieben)
-                // Positiver Wert verschiebt den Schatten nach oben (Richtung +Y der Szene)
-                // Negativer Wert verschiebt den Schatten nach unten (Richtung -Y der Szene)
-                moon.position.y = 0; // Beispiel: Verschiebt den Schatten um 0.5 Einheiten nach oben
+                earthDemoRotationOffset = 4 * Math.PI / 4; 
+                
+                moon.position.y = 0.3; 
 
-                setFocus('earth'); // Fokus auf Erde, um den Schatten zu sehen
+                setFocus('earth'); 
             } else if (type === 'mofi') {
-                // KORREKTUR: Angepasstes Timing
-                demoDurationDays = 17.5 - 14.3; // 3.2 Tage
-                currentDay = 14.3; // Start bei Tag 14.3
+                demoDurationDays = 17.5 - 14.3; 
+                currentDay = 14.3; 
                 demoLoopStartDay = currentDay;
-                demoLoopEndDay = 17.5; // Ende bei Tag 17.5
+                demoLoopEndDay = 17.5; 
 
-                // Offset für den Schatten
-                moonPivot.position.y = MOON_RADIUS * 1.0; // Schatten trifft nicht mittig
+                moonPivot.position.y = MOON_RADIUS * 1.0; 
                 
-                // MoFi-Demo im Shader aktivieren
                 originalMoonMaterial.uniforms.uDemoActive.value = true;
                 
-                setFocus('moon'); // Fokus auf Mond, um den Effekt zu sehen
+                setFocus('moon'); 
             }
             
             updatePositions(currentDay);
@@ -879,53 +925,52 @@
         // --- Demo-Beenden ---
         function endDemo() {
             resetToRealMode();
-            // Setze den Tag auf den normalen Wert, der vor der Demo war, oder auf 0.
             currentDay = 0; 
             daySlider.value = currentDay;
-            moonPivot.position.y = 0; // Offset zurücksetzen
+            moonPivot.position.y = 0; 
             
-            earthDemoRotationOffset = 0.0; // NEU: Offset zurücksetzen
-
+            earthDemoRotationOffset = 0.0; 
+            moon.position.y = 0; 
+            
             updatePositions(currentDay);
             updateUI();
         }
         
         // --- Zu Mondphase springen ---
         function jumpToPhase(index) {
-            pauseSimulation(); // KORREKTUR: Diese Funktion stoppt die Simulation
-            resetToRealMode(); // Wichtig: Erst Demo beenden, dann springen
-            earthDemoRotationOffset = 0.0; // NEU: Sicherstellen, dass der Offset 0 ist
-            moonPivot.position.y = 0; // Offset zurücksetzen
+            pauseSimulation(); 
+            resetToRealMode(); 
+            
+            earthDemoRotationOffset = 0.0; 
+            moonPivot.position.y = 0; 
+            moon.position.y = 0;
             
             currentDay = PHASE_DAY_MAP[index];
 
             // --- NEUE HIGHLIGHT-LOGIK ---
-            // Alle Knöpfe deaktivieren
             moonPhaseButtons.forEach(btn => {
                 btn.classList.remove('active');
             });
             
-            // Nur den geklickten Knopf aktivieren
             const clickedButton = moonPhaseButtons.find(btn => parseInt(btn.dataset.phaseIndex) === index);
             if (clickedButton) {
                 clickedButton.classList.add('active');
             }
-            // --- ENDE NEUE LOGIK ---
             
             updatePositions(currentDay);
             daySlider.value = currentDay;
             updateUI();
 
             // --- NEU: Kamera-Sprung & Modus-Wechsel ---
-            cameraFocus = 'earthView'; // Setze den neuen Kamera-Modus
+            cameraFocus = 'earthView'; 
             
             let earthPos = new THREE.Vector3();
             let moonPos = new THREE.Vector3();
             earth.getWorldPosition(earthPos);
             moon.getWorldPosition(moonPos);
             
-            camera.position.copy(earthPos); // Kamera in die Erde
-            controls.target.copy(moonPos); // Fokus auf den Mond
+            camera.position.copy(earthPos); 
+            controls.target.copy(moonPos); 
             lastCameraTargetPos.copy(moonPos);
         }
 
@@ -940,25 +985,22 @@
             }
 
             if (isPlaying) {
-                // deltaDays = (speed * (1/60s) pro Frame) * (Anzahl der Tage, die 1x pro Sekunde vergehen sollen)
                 const deltaDays = (actualSpeed * (1 / 60)) * (isDemoActive ? 1 : EARTH_YEAR_DAYS / 60); 
                 currentDay += deltaDays;
                 
                 if (isDemoActive) {
-                    // Loop-Logik für Demos
                     if (currentDay > demoLoopEndDay) {
-                        currentDay = demoLoopStartDay; // Zurück zum Startpunkt der Demo
-                    } else if (currentDay < demoLoopStartDay) { // Falls Rückwärtsbewegung gewünscht wäre
+                        currentDay = demoLoopStartDay; 
+                    } else if (currentDay < demoLoopStartDay) { 
                         currentDay = demoLoopEndDay;
                     }
                 } else {
-                    // Normale Loop-Logik
                     if (currentDay > EARTH_YEAR_DAYS) {
                         currentDay -= EARTH_YEAR_DAYS;
                     }
                 }
                 
-                daySlider.value = currentDay; // Slider aktualisieren
+                daySlider.value = currentDay; 
                 updateUI();
             }
 
@@ -979,32 +1021,26 @@
             // 2. Eigendrehung der Erde (1x pro Tag)
             let rotationFactor = 1.0;
             
-            // NEUE LOGIK: Wenn SoFi-Demo aktiv, verlangsamen wir die Erddrehung (z.B. 100x)
             if (isDemoActive && demoType === 'sofi') {
-                // Wir verwenden eine stark reduzierte Geschwindigkeit, um den Schattenwanderweg sichtbar zu machen.
-                rotationFactor = 0.3; 
+                rotationFactor = 0.1; 
             }
             
             earth.rotation.y = (day * rotationFactor) * Math.PI * 2; 
-            earth.rotation.y += earthDemoRotationOffset; // Fügt den Demo-Offset hinzu
+            earth.rotation.y += earthDemoRotationOffset; 
 
             // 3. Umlaufbahn des Mondes (um die Erde)
-            // KORREKTUR (Monatliche Finsternis): Offset wird abgezogen
             let moonOrbitAngle;
             if (isDemoActive) {
-                // Demos müssen den Offset ignorieren, um die Finsternis-Linie zu treffen
                 moonOrbitAngle = (day / LUNAR_MONTH_DAYS) * Math.PI * 2;
             } else {
-                // Normale Phasen verwenden den Offset, um Finsternisse zu vermeiden
                 moonOrbitAngle = ((day - PHASE_OFFSET_DAYS) / LUNAR_MONTH_DAYS) * Math.PI * 2;
             }
             
-            // KORREKTUR (Monatliche Finsternis): Mond-Pivot folgt der Erde
             let earthPos = new THREE.Vector3();
             earth.getWorldPosition(earthPos);
             
             moonPivot.position.copy(earthPos);
-            moonPivot.rotation.y = moonOrbitAngle; // Mond rotiert um die (jetzt fixierte) Achse
+            moonPivot.rotation.y = moonOrbitAngle; 
             moonOrbitLine.position.copy(earthPos);
             
             // 4. Eigendrehung des Mondes (Gebundene Rotation)
@@ -1015,59 +1051,61 @@
             earth.getWorldPosition(tempVec);
             earth.material.uniforms.uObjectWorldPosition.value.copy(tempVec);
             
+            // NEU: Befülle Erde-Shader mit Mondposition für SoFi-Schattenberechnung
+            let moonWorldPosition = new THREE.Vector3();
+            moon.getWorldPosition(moonWorldPosition);
+            earth.material.uniforms.uMoonPosition.value.copy(moonWorldPosition);
+
             // MoFi-Demo Logik
             if (isDemoActive && demoType === 'mofi') {
-                // Berechne den Animationsfortschritt (0.0 bis 1.0)
                 const animProgress = (currentDay - demoLoopStartDay) / (demoLoopEndDay - demoLoopStartDay);
                 
                 // --- Fading-Logik (State-Based) ---
-                // KORREKTUR: Angepasstes Fading
-                // Demo: 14.3 bis 17.5 (3.2 Tage)
-                
                 const dayToProgress = (d) => (d - demoLoopStartDay) / (demoLoopEndDay - demoLoopStartDay);
 
-                // DEINE NEUEN ZEITEN (basierend auf der letzten Anfrage)
-                const peakDay = 15.53; 
-                const peakProgress = dayToProgress(peakDay); // (15.5 - 14.3) / 3.2 = 0.375
+                const peakDay = 15.7; 
+                const peakProgress = dayToProgress(peakDay); 
 
                 // Rot
-                const redFadeInStart = peakProgress - 0.05; // (0.325) // Fade-In (Start)
-                const redFadeOutStart = dayToProgress(16); // (0.6875) // Fade-Out (Start)
-                const redFadeOutEnd = dayToProgress(16.8);   // (0.78125) // Fade-Out (Ende)
+                const redFadeInStart = peakProgress - 0.05; 
+                const redFadeOutStart = dayToProgress(16.4); 
+                const redFadeOutEnd = dayToProgress(16.5);   
                 
                 // Schatten
-                const shadowFadeInStart = dayToProgress(16.5); // 0.6875
-                const shadowFadeInEnd = dayToProgress(16.6); // 0.71875
-                const shadowFadeOutStart = dayToProgress(16); // 0.8125 // Veraltet?
+                const shadowFadeInStart = peakProgress - 0.05; 
+                const shadowFadeInEnd = peakProgress;         
+
+                const shadowFadeOutStart = dayToProgress(16.2); // 0.6875
+                const shadowFadeOutEnd = dayToProgress(16.5);   // 0.71875
                 
-                const shadowTargetBrightness = 0.6; // 40% Deckkraft (1.0 - 0.4 = 0.6 Helligkeit)
+                const shadowTargetBrightness = 0.6; // KORRIGIERT: 40% Deckkraft (1.0 - 0.4 = 0.6 Helligkeit)
 
                 let redIntensity = 0.0;
-                let shadowBrightness = 0.02; // 100% Schwarz
+                let shadowBrightness = 0.0; 
 
                 // Rot Fade-In (Start -> Peak 15.5)
                 if (animProgress <= peakProgress) {
                     const fadeProgress = Math.max(0.0, (animProgress - redFadeInStart) / (peakProgress - redFadeInStart));
-                    redIntensity = (fadeProgress * fadeProgress); // 0 -> 1
+                    redIntensity = (fadeProgress * fadeProgress); 
                 }
                 // Rot Fade-Out (15.5 -> 16.8)
                 else if (animProgress > peakProgress && animProgress <= redFadeOutEnd) {
                     const fadeProgress = (animProgress - peakProgress) / (redFadeOutEnd - peakProgress);
-                    redIntensity = 1.0 - (fadeProgress * fadeProgress); // 1 -> 0
+                    redIntensity = 1.0 - (fadeProgress * fadeProgress); 
                 }
 
                 // Schatten-Deckkraft Fade-In (15.34 -> 15.5)
-                if (animProgress > shadowFadeInStart && animProgress <= peakProgress) {
-                    const fadeProgress = (animProgress - shadowFadeInStart) / (peakProgress - shadowFadeInStart);
+                if (animProgress > shadowFadeInStart && animProgress <= shadowFadeInEnd) {
+                    const fadeProgress = (animProgress - shadowFadeInStart) / (shadowFadeInEnd - shadowFadeInStart);
                     shadowBrightness = (fadeProgress * fadeProgress) * shadowTargetBrightness; // 0.0 -> 0.6
                 }
                 // Plateau (15.5 -> 16.5)
-                else if (animProgress > peakProgress && animProgress <= shadowFadeOutStart) {
-                     shadowBrightness = shadowTargetBrightness; // Bleibt transparent (40% Deckkraft)
+                else if (animProgress > shadowFadeInEnd && animProgress <= shadowFadeOutStart) {
+                     shadowBrightness = shadowTargetBrightness; // Bleibt 40% Deckkraft
                 }
                 // Schatten-Deckkraft Fade-Out (16.5 -> 16.6)
-                else if (animProgress > shadowFadeOutStart && animProgress <= shadowFadeInEnd) {
-                    const fadeProgress = (animProgress - shadowFadeOutStart) / (shadowFadeInEnd - shadowFadeOutStart);
+                else if (animProgress > shadowFadeOutStart && animProgress <= shadowFadeOutEnd) {
+                    const fadeProgress = (animProgress - shadowFadeOutStart) / (shadowFadeOutEnd - shadowFadeOutStart);
                     shadowBrightness = shadowTargetBrightness - ((fadeProgress * fadeProgress) * shadowTargetBrightness); // 0.6 -> 0.0
                 }
                 
@@ -1078,32 +1116,8 @@
             moon.getWorldPosition(tempVec);
             if (moon.material.uniforms) {
                 originalMoonMaterial.uniforms.uObjectWorldPosition.value.copy(tempVec);
-                earth.getWorldPosition(tempVec); // Brauchen Erd-Position für Shader
+                earth.getWorldPosition(tempVec); 
                 originalMoonMaterial.uniforms.uEarthPosition.value.copy(tempVec);
-            }
-            
-            // 6. SoFi-Schatten auf der Erde positionieren
-            if (umbra.visible) {
-                // Holen Sie sich die Richtung von der Erde zum Mond im Weltraum
-                let moonWorldPosition = new THREE.Vector3();
-                moon.getWorldPosition(moonWorldPosition);
-                let earthWorldPosition = new THREE.Vector3();
-                earth.getWorldPosition(earthWorldPosition);
-                
-                let earthToMoonDirection = new THREE.Vector3().subVectors(moonWorldPosition, earthWorldPosition).normalize();
-
-                // Konvertieren Sie diese Richtung in das lokale Koordinatensystem der Erde
-                let localEarthToMoonDirection = earth.worldToLocal(moonWorldPosition.clone()).normalize();
-                
-                // Der Schattenpunkt ist an der Oberfläche in dieser Richtung
-                let shadowLocalPosition = localEarthToMoonDirection.multiplyScalar(EARTH_RADIUS * 1.01);
-                
-                umbra.position.copy(shadowLocalPosition);
-                penumbra.position.copy(shadowLocalPosition);
-                
-                // Ausrichtung des Schattens: Er muss zum Erdmittelpunkt zeigen
-                umbra.lookAt(new THREE.Vector3(0,0,0));
-                penumbra.lookAt(new THREE.Vector3(0,0,0));
             }
         }
 
@@ -1113,27 +1127,52 @@
 
             // NEUER 'earthView'-Modus
             if (cameraFocus === 'earthView') {
-                earth.getWorldPosition(currentTargetPos); // Kamera-Position = Erde
+                earth.getWorldPosition(currentTargetPos); 
                 
                 if (isJump) {
                     lastCameraTargetPos.copy(currentTargetPos);
-                } else if (isPlaying) { // Nur driften, wenn Simulation läuft
+                } else if (isPlaying) { 
                     const delta = currentTargetPos.clone().sub(lastCameraTargetPos);
                     camera.position.add(delta);
                 }
                 lastCameraTargetPos.copy(currentTargetPos);
                 
-                // Fokus-Ziel (controls.target) auf den Mond setzen
                 let moonPos = new THREE.Vector3();
                 moon.getWorldPosition(moonPos);
                 controls.target.copy(moonPos);
                 return;
             }
 
-            // Normale Fokus-Logik
+            // NEU: 'ecliptic_side_view'-Modus (KORRIGIERT)
+            if (cameraFocus === 'ecliptic_side_view') {
+                targetObj = earth; // Die Kamera folgt der Erde
+                
+                targetObj.getWorldPosition(currentTargetPos);
+
+                if (isJump) {
+                    lastCameraTargetPos.copy(currentTargetPos);
+                } else if (isPlaying || isDemoActive) { 
+                    const delta = currentTargetPos.clone().sub(lastCameraTargetPos);
+                    
+                    // KORREKTUR: Kamera folgt der Erde, bleibt aber auf Y=0
+                    
+                    // Positioniere 40 Einheiten "hinter" und 4 "seitlich" der Erde (relativ zur Sonne)
+                    let offset = currentTargetPos.clone().normalize().multiplyScalar(40); // KORRIGIERT: 40 Einheiten "hinter" der Erde
+                    let sideOffset = new THREE.Vector3(-currentTargetPos.z, 0, currentTargetPos.x).normalize().multiplyScalar(4); // KORRIGIERT: 4 Einheiten seitlich
+                    
+                    camera.position.copy(currentTargetPos).add(offset).add(sideOffset); 
+                    camera.position.y = 0; // Garantiert auf der Ekliptik bleiben
+                }
+                lastCameraTargetPos.copy(currentTargetPos);
+                
+                // Wichtig: Das Ziel (controls.target) bleibt immer die Sonne
+                controls.target.set(0, 0, 0);
+                return;
+            } // <--- Diese Klammer hat gefehlt!
+            // Normale Fokus-Logik (KORRIGIERT: Ekliptik-Modus entfernt)
             if (cameraFocus === 'system') {
                 targetObj = sun;
-            } else if (cameraFocus === 'earth') {
+            } else if (cameraFocus === 'earth') { 
                 targetObj = earth;
             } else { // 'moon'
                 targetObj = moon;
@@ -1166,32 +1205,19 @@
             earth.getWorldPosition(earthPos);
             moon.getWorldPosition(moonPos);
 
-            // KORRIGIERTE Phasen-Logik
             const vecEarthToMoon = new THREE.Vector3().subVectors(moonPos, earthPos);
             const vecEarthToSun = new THREE.Vector3().subVectors(sunPos, earthPos); 
             
-            // Winkel auf der Ekliptik-Ebene (XZ)
             let angle = Math.atan2(vecEarthToSun.z, vecEarthToSun.x) - Math.atan2(vecEarthToMoon.z, vecEarthToMoon.x);
-            // Normalisieren auf 0 bis 2PI
             angle = (angle + Math.PI * 2) % (Math.PI * 2);
-
-            // 0 = Neumond (vor der Erde)
-            // PI = Vollmond (hinter der Erde)
             
             let phaseIndex = 0;
-            // Mappen von [0, 2PI] auf [0, 8]
             let normalizedAngle = angle;
             
-            // KORREKTUR: Rundungsfehler behoben
             phaseIndex = Math.floor(normalizedAngle / (Math.PI * 2) * 8 + 0.5) % 8;
             
             const phaseNames = ["Neumond", "Zun. Sichel", "Zun. Halbmond", "Zun. Drittel", "Vollmond", "Abn. Drittel", "Abn. Halbmond", "Abn. Sichel"];
             let phaseName = phaseNames[phaseIndex];
-
-            // Entfernt: Automatische Hervorhebung (ersetzt durch Klick-Logik in jumpToPhase)
-            // moonPhaseButtons.forEach((btn, idx) => {
-            //     btn.classList.toggle('active', idx === phaseIndex);
-            // });
 
             let infoText = `Tag: ${Math.floor(currentDay % EARTH_YEAR_DAYS)} | ${phaseName}`;
             
@@ -1203,11 +1229,10 @@
                     infoText = "MONDFINSTERNIS (Demo)";
                 }
             } else {
-                // Reale Prüfung (sehr vereinfacht, da MOON_TILT_RAD in echter Simulation)
                 let moonWorldY = moon.getWorldPosition(new THREE.Vector3()).y;
                 let earthWorldY = earth.getWorldPosition(new THREE.Vector3()).y; 
                 
-                let yDiff = Math.abs(moonWorldY - earthWorldY); 
+                let yDiff = Math.abs(moonWorldY - earthWorldY); // KORRIGIERT: yDiff deklariert
                 
                 const ECLIPSE_TOLERANCE = (MOON_RADIUS + EARTH_RADIUS) / 3; 
 
