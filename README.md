@@ -630,7 +630,7 @@
                 vertexShader: earthVertexShader,
                 fragmentShader: earthFragmentShader,
                 uniforms: {
-                    dayTexture: { value: textureLoader.load('https://threejs.org/examples/textures/planets/earth_atmos_2048.jpg') },
+                    dayTexture: { value: textureLoader.load('https://stemkoski.github.io/Three.js/images/earth-day.jpg') },
                     uSunPosition: { value: new THREE.Vector3(0, 0, 0) },
                     uObjectWorldPosition: { value: new THREE.Vector3() },
                     uNightBrightness: { value: 0.3 }, 
