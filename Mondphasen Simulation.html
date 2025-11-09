@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sonnensystem-Simulation (6. Klasse)</title>
+    <title>Sonnensystem-Simulation (6. Klasse) - Realistische Bahnen & Saturnschatten</title>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
     <style>
@@ -37,31 +37,48 @@
             max-height: calc(100vh - 20px);
             overflow-y: auto;
             transition: max-width 0.3s ease, padding 0.3s ease;
-            z-index: 1000; /* Sicherstellen, dass UI über 3D-Szene ist */
+            z-index: 1000; 
         }
 
-        /* Neu: Für minimierbare UI */
         #toggle-ui {
-            width: 100%;
-            margin-bottom: 10px;
-            font-size: 12px;
-            padding: 6px;
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 30px;
+            height: 30px;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            background: transparent;
+            border: 1px solid rgba(255,255,255,0.3);
         }
+        #toggle-ui:hover {
+            background: rgba(255,255,255,0.1);
+        }
+
         #ui-container.minimized {
-            max-width: 100px;
-            padding: 10px 5px;
+            max-width: 50px; 
+            padding: 10px;
             overflow: hidden;
+            height: 30px; 
         }
         #ui-container.minimized .control-group {
             display: none;
         }
         #ui-container.minimized #toggle-ui {
-            margin-bottom: 0;
+             top: 50%;
+             left: 50%;
+             transform: translate(-50%, -50%);
+             border: none;
         }
-        /* Ende Neu */
 
         .control-group {
             margin-bottom: 15px;
+        }
+        .control-group:first-of-type {
+            margin-top: 25px;
         }
 
         .control-group h3 {
@@ -88,7 +105,7 @@
             cursor: pointer;
             font-size: 14px;
             font-weight: 500;
-            transition: background-color 0.2s ease, transform 0.1s ease;
+            transition: all 0.2s ease; 
         }
 
         .btn:hover {
@@ -99,11 +116,47 @@
             transform: scale(0.98);
         }
 
+        #play-pause-btn.playing {
+            background-color: #28a745; 
+            box-shadow: 0 0 10px rgba(40, 167, 69, 0.5); 
+        }
+        #play-pause-btn.playing:hover {
+            background-color: #218838;
+        }
+
         .btn-secondary {
             background-color: #4a4a4a;
         }
         .btn-secondary:hover {
             background-color: #666;
+        }
+
+        .btn-focus {
+            background-color: #388e3c; 
+            color: white;
+        }
+        .btn-focus:hover {
+            background-color: #4caf50; 
+        }
+
+        .btn-planet {
+            background-color: #d87c1c; 
+            color: white;
+            font-size: 12px !important; 
+            padding: 6px 8px !important;
+        }
+        .btn-planet:hover {
+            background-color: #e69545; 
+        }
+
+        .btn-moon {
+            background-color: #6f42c1; 
+            color: white;
+            font-size: 11px !important; 
+            padding: 4px 8px !important;
+        }
+        .btn-moon:hover {
+            background-color: #59359a;
         }
         
         .btn-warning {
@@ -114,7 +167,7 @@
             background-color: #e0a800;
         }
         
-        .btn-danger { /* Neuer Button-Style */
+        .btn-danger { 
             background-color: #dc3545;
             color: white;
         }
@@ -122,6 +175,24 @@
             background-color: #c82333;
         }
 
+        .btn-info { 
+            background-color: #00ffff;
+            color: #000;
+            font-weight: 700;
+        }
+        .btn-info:hover {
+            background-color: #00aaaa;
+            color: #fff;
+        }
+
+        .btn-pulse {
+            animation: pulse-animation 2s infinite;
+        }
+        @keyframes pulse-animation {
+            0% { box-shadow: 0 0 0 0 rgba(0, 255, 255, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(0, 255, 255, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(0, 255, 255, 0); }
+        }
 
         .btn-group {
             display: flex;
@@ -134,6 +205,17 @@
             font-size: 12px;
             padding: 6px 8px;
         }
+
+        #moon-focus-container {
+            display: none; 
+            flex-wrap: wrap;
+            gap: 4px;
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px dashed #555;
+            animation: fadeIn 0.5s ease;
+        }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
         input[type="range"] {
             width: 100%;
@@ -202,9 +284,8 @@
             margin-top: 10px;
         }
 
-        /* --- NEU: Info-Popup --- */
         #info-popup {
-            display: none; /* Standardmässig versteckt */
+            display: none; 
             position: fixed;
             top: 50%;
             left: 50%;
@@ -215,7 +296,7 @@
             border-radius: 12px;
             box-shadow: 0 5px 20px rgba(0, 0, 0, 0.7);
             border: 1px solid rgba(255, 255, 255, 0.2);
-            z-index: 2000; /* Über allem, auch der UI */
+            z-index: 2000; 
             width: 90%;
             max-width: 400px;
             align-items: center;
@@ -233,7 +314,7 @@
             border-bottom: 1px solid #555;
             padding-bottom: 10px;
             text-align: center;
-            color: #ffc107; /* Akzentfarbe */
+            color: #ffc107; 
         }
         #popup-details p {
             margin: 8px 0;
@@ -241,22 +322,88 @@
             line-height: 1.4;
         }
         #popup-details strong {
-            color: #fff; /* Statt gelb, für besseren Kontrast */
+            color: #fff; 
             font-weight: 600;
-            min-width: 120px; /* Bessere Ausrichtung */
+            min-width: 140px; 
             display: inline-block;
         }
         #popup-details span {
             color: #ddd;
         }
         #popup-details .fun-fact {
-            margin-top: 8px; /* Reduziert von 15px, da jetzt mehrere Fakten existieren */
-            padding-top: 0; /* Entfernt, da die Trennlinie jetzt per JS hinzugefügt wird */
-            border-top: none; /* Entfernt */
+            margin-top: 8px; 
+            padding-top: 0; 
+            border-top: none; 
             font-style: italic;
             color: #ccc;
         }
-        /* --- ENDE NEU --- */
+
+        #info-toast-button {
+            display: none; 
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 1001; 
+            background-color: #00ffff;
+            color: #000;
+            border: 2px solid #000;
+            box-shadow: 0 4px 10px rgba(0, 255, 255, 0.3);
+            font-size: 14px;
+            font-weight: 700;
+            font-family: cursive;
+            padding: 10px 15px;
+        }
+
+        /* --- UFO Dialog Styles --- */
+        #ufo-dialog {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 20, 0, 0.95); 
+            color: #0f0; 
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 0 30px rgba(0, 255, 0, 0.5);
+            border: 2px solid #0f0;
+            z-index: 2001;
+            width: 80%;
+            max-width: 350px;
+            font-family: "Courier New", monospace;
+            text-align: center;
+        }
+        #ufo-dialog h3 {
+            margin-top: 0;
+            color: #0f0;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+        #ufo-dialog-text {
+            font-size: 16px;
+            line-height: 1.5;
+            margin-bottom: 20px;
+        }
+        .ufo-btn-group {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+        }
+        .ufo-btn {
+            background: #000;
+            color: #0f0;
+            border: 1px solid #0f0;
+            padding: 8px 15px;
+            cursor: pointer;
+            font-family: "Courier New", monospace;
+            font-weight: bold;
+            transition: all 0.2s;
+        }
+        .ufo-btn:hover {
+            background: #0f0;
+            color: #000;
+            box-shadow: 0 0 15px rgba(0, 255, 0, 0.8);
+        }
 
     </style>
 </head>
@@ -265,8 +412,7 @@
     <div id="container"></div>
 
     <div id="ui-container">
-        
-        <button id="toggle-ui" class="btn btn-secondary">Verbergen</button>
+        <button id="toggle-ui" class="btn btn-secondary" title="Menü verbergen">✕</button>
 
         <div class="control-group">
             <h3>Steuerung</h3>
@@ -274,19 +420,15 @@
                 <button id="play-pause-btn" class="btn">Pause</button>
             </div>
             
-            <label for="day-slider">Tag im Jahr: <span id="day-label">0</span></label>
+            <label for="day-slider">Tag im Jahr: (Eingabe)</label>
             <input type="range" id="day-slider" min="0" max="365" value="0" step="0.1">
             
-            <label for="speed-slider" style="margin-top: 10px;">Geschwindigkeit: <span id="speed-label">1.0</span>x</label>
-            <input type="range" id="speed-slider" min="0" max="100" value="10" step="1"> <!-- Startwert auf 10 (langsamer) gesetzt -->
-
-            <!-- MODIFIZIERT: Label-Text geändert -->
-            <label class="checkbox-label" style="margin-top: 15px;">
+            <label for="speed-slider" style="margin-top: 10px;">Geschwindigkeit:</label>
+            <input type="range" id="speed-slider" min="0" max="100" value="10" step="1"> <label class="checkbox-label" style="margin-top: 15px;">
                 <input type="checkbox" id="orbit-checkbox" checked>
                 Erd-/Mondbahn anzeigen
             </label>
             
-            <!-- MODIFIZIERT: Aufgeteilt in zwei Checkboxen -->
             <div style="display: flex; gap: 15px; margin-top: 10px;">
                 <label class="checkbox-label" style="flex: 1;">
                     <input type="checkbox" id="planets-visible-checkbox" checked>
@@ -305,23 +447,28 @@
         <div class="control-group">
             <h3>Kamera-Fokus</h3>
             <div class="btn-group">
-                <button id="focus-system" class="btn btn-secondary">Sonnensystem</button>
-                <button id="focus-earth" class="btn btn-secondary">Erde</button>
-                <button id="focus-moon" class="btn btn-secondary">Mond</button>
-                <button id="focus-ecliptic" class="btn btn-secondary">Ekliptik-Sicht</button>
+                <button id="focus-system" class="btn btn-focus">Sonnensystem</button>
+                <button id="focus-earth" class="btn btn-focus">Erde</button>
+                <button id="focus-moon" class="btn btn-focus">Mond</button>
+                <button id="focus-ecliptic" class="btn btn-focus">Ekliptik-Sicht</button>
             </div>
-            <!-- NEU: Container für Planeten-Fokus-Buttons -->
             <div id="planet-focus-buttons" class="btn-group" style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #444; display: none;">
-                <!-- Wird per JS befüllt -->
-            </div>
+                </div>
+            <div id="moon-focus-container">
+                </div>
         </div>
 
         <div class="control-group">
-            <h3>Ereignisse</h3>
+            <h3>Ereignisse & Extras</h3>
             <div class="btn-group" id="demo-buttons">
                 <button id="demo-sofi" class="btn btn-warning">Sonnenfinsternis</button>
                 <button id="demo-mofi" class="btn btn-warning">Mondfinsternis</button>
             </div>
+            
+            <div class="btn-group" style="margin-top: 10px;">
+                <button id="follow-comet-btn" class="btn btn-info btn-pulse" style="display: none;">🔭 Komet verfolgen! (Shift+K)</button>
+            </div>
+            
             <div class="btn-group" id="demo-control-buttons" style="display: none; margin-top: 10px;">
                 <button id="end-demo-btn" class="btn btn-danger">Demo beenden</button>
             </div>
@@ -331,7 +478,7 @@
                  <input type="range" id="demo-speed-slider" min="0" max="100" value="50" step="1">
             </div>
             
-            <div id="info-box">Tag: 0</div>
+            <div id="info-box">Mondphase: Neumond</div>
         </div>
 
         <div class="control-group">
@@ -349,30 +496,46 @@
         </div>
     </div>
 
-    <!-- NEU: Info-Popup (außerhalb von #container) -->
     <div id="info-popup">
         <div id="info-popup-content">
             <h2 id="popup-title">Titel</h2>
             <div id="popup-details">
-                <!-- Inhalt wird per JS geladen -->
-            </div>
+                </div>
             <button id="popup-close-btn" class="btn btn-secondary">Schliessen</button>
         </div>
     </div>
 
+    <!-- UFO Dialog -->
+    <div id="ufo-dialog">
+        <h3>🛸 Unbekanntes Flugobjekt</h3>
+        <div id="ufo-dialog-text">Wir sind auf dem Weg zur Erde um diese zu übernehmen. Weißt du wo die ist?</div>
+        <div class="ufo-btn-group" id="ufo-initial-buttons">
+            <button id="ufo-yes-btn" class="ufo-btn">Ja, dort lang! 👉</button>
+            <button id="ufo-no-btn" class="ufo-btn">Keine Ahnung 🤷‍♂️</button>
+        </div>
+        <div class="ufo-btn-group" id="ufo-close-group" style="display: none;">
+            <button id="ufo-close-btn" class="ufo-btn">Kommunikation beenden</button>
+        </div>
+    </div>
+
+    <button id="info-toast-button" class="btn btn"></button>
 
     <script>
         // --- Globale Variablen ---
         let scene, camera, renderer, controls;
-        let sun, earth, moon, earthPivot, moonPivot;
+        let sun, earth, moon, moonPivot;
+        let earthTiltPivot;
+        
         let earthOrbitLine, moonOrbitLine;
         let starField;
         
         let otherPlanets = [];
-        let otherPlanetPivots = [];
+        let otherPlanetControls = []; 
         let otherPlanetOrbits = [];
+        let otherMoons = []; 
         let planetsData = [];
         let saturnRingMaterial;
+        let saturnPlanetMaterial;
         
         let isPlaying = true;
         let currentDay = 0;
@@ -392,7 +555,7 @@
         let demoRedOverlay = 0.0; 
         let earthDemoRotationOffset = 0.0;
         
-        // --- NEU: Kamera-Animation (Tweening) ---
+        // Kamera-Animation (Tweening)
         const clock = new THREE.Clock();
         let isCameraTransitioning = false;
         let cameraTransitionProgress = 0.0;
@@ -402,27 +565,24 @@
         let cameraTransitionEndPos = new THREE.Vector3();
         let cameraTransitionEndTarget = new THREE.Vector3();
         let cameraFocusAfterTransition = null;
-        // --- ENDE NEU ---
         
-        // --- NEU: Raycasting (Klick-Erkennung) ---
+        // Raycasting (Klick-Erkennung)
         let raycaster;
         let mouse;
         let clickableObjects = [];
-        // --- ENDE NEU ---
         
-        // --- NEU: Touch-Handling für Popup ---
+        // Touch-Handling für Popup
         let touchStartX = 0;
         let touchStartY = 0;
         let isDragging = false;
-        const dragThreshold = 10; // Pixel-Toleranz für Drag vs. Tap
-        // --- ENDE NEU ---
+        const dragThreshold = 10;
 
         // --- Konstanten ---
         const SCENE_SCALE = 1.0;
         const SUN_RADIUS = 20 * SCENE_SCALE; 
         const EARTH_RADIUS = 2.5 * SCENE_SCALE;
         const MOON_RADIUS = 0.7 * SCENE_SCALE;
-        const ERDE_RADIUS_KM = 6371; // NEU: Echter Erdradius für Vergleiche
+        const ERDE_RADIUS_KM = 6371;
         
         const EARTH_DISTANCE = 150 * SCENE_SCALE;
         const MOON_DISTANCE = 15 * SCENE_SCALE;
@@ -435,31 +595,278 @@
         
         const PHASE_OFFSET_DAYS = 5; 
         
+        // --- Einstellbare Weichheit für Saturn-Ringschatten (höher = weicher) ---
+        const RING_SHADOW_SOFTNESS = 10 * SCENE_SCALE;
+        // ---------------------------------------------------------------------------
+        
+        // --- Saturn Ring Radien für Shader ---
+        const SATURN_RING_C_INNER = 1.00 * EARTH_RADIUS; // Innenkante C
+        const SATURN_RING_B_OUTER = 2.05 * EARTH_RADIUS; // Aussenkante B
+        const SATURN_RING_A_INNER = 2.25 * EARTH_RADIUS; // Innenkante A (Cassini-Teilung)
+        const SATURN_RING_A_OUTER = 2.70 * EARTH_RADIUS; // Aussenkante A (Gesamt-Ring)
+        
+        const RING_INNER_RADIUS_SCALE = 1.2; // 13.0 * 1.2 = 15.6 (für Saturnringmaterial)
+        const RING_OUTER_RADIUS_SCALE = 2.7; // 13.0 * 2.7 = 35.1
+
         const PHASE_DAY_MAP = [
-            LUNAR_MONTH_DAYS * 0.02  + PHASE_OFFSET_DAYS, // Neumond
-            LUNAR_MONTH_DAYS * 0.145 + PHASE_OFFSET_DAYS, // Zun. Sichel (Index 1)
-            LUNAR_MONTH_DAYS * 0.27  + PHASE_OFFSET_DAYS, // Zun. Halbmond (Index 2)
-            LUNAR_MONTH_DAYS * 0.395 + PHASE_OFFSET_DAYS, // Zun. Drittel (Index 3)
-            LUNAR_MONTH_DAYS * 0.55  + PHASE_OFFSET_DAYS, // Vollmond
-            LUNAR_MONTH_DAYS * 0.71  + PHASE_OFFSET_DAYS, // Abn. Drittel (Index 5)
-            LUNAR_MONTH_DAYS * 0.85  + PHASE_OFFSET_DAYS, // Abn. Halbmond (Index 6)
-            LUNAR_MONTH_DAYS * 0.97  + PHASE_OFFSET_DAYS  // Abn. Sichel (Index 7)
+            LUNAR_MONTH_DAYS * 0.02  + PHASE_OFFSET_DAYS, 
+            LUNAR_MONTH_DAYS * 0.145 + PHASE_OFFSET_DAYS, 
+            LUNAR_MONTH_DAYS * 0.27  + PHASE_OFFSET_DAYS, 
+            LUNAR_MONTH_DAYS * 0.395 + PHASE_OFFSET_DAYS, 
+            LUNAR_MONTH_DAYS * 0.55  + PHASE_OFFSET_DAYS, 
+            LUNAR_MONTH_DAYS * 0.71  + PHASE_OFFSET_DAYS, 
+            LUNAR_MONTH_DAYS * 0.85  + PHASE_OFFSET_DAYS, 
+            LUNAR_MONTH_DAYS * 0.97  + PHASE_OFFSET_DAYS  
         ];
 
-        // --- NEU: Variable um manuelle Kamerasteuerung zu erkennen ---
         let isUserControllingCamera = false;
+        let currentSelectedInfo = null;
+        let infoToastButton;
+        let followCometBtn; 
+
+        // --- UFO Variablen ---
+        let ufo;
+        let ufoState = 'inactive'; 
+        let ufoSpawnTimer = Math.random() * 180 + 120; 
+        let ufoWanderTimer = 0;
+        let ufoTargetPos = new THREE.Vector3();
+        let ufoCurrentTargetObject = null; 
+        let ufoDepartureTarget = null; 
+        const UFO_SPEED = 80 * SCENE_SCALE; 
+        let ufoLeaveTimer = 0; 
+        // --------------------------
+        
+        // --- Komet Variablen und Klasse ---
+        let comet; 
+        // NEU: Seltenerer Spawn (10-20 Minuten = 600-1200 Sekunden)
+        let cometSpawnTimer = THREE.MathUtils.randFloat(600, 1200); 
+        const COMET_SPAWN_DIST = 2000 * SCENE_SCALE; 
+        const COMET_DESTROY_DIST = 1600 * SCENE_SCALE; 
+        
+        // NEU: Gravitationsstärken (Stärker angezogen, aber Beschleunigung gedämpft)
+        const GRAVITY_STRENGTH = 25000 * SCENE_SCALE; 
+        const GRAVITY_FACTOR = 0.05; 
+
+        class Comet {
+            constructor(scene) {
+                this.scene = scene;
+                this.particles = [];
+                this.group = new THREE.Group(); 
+                scene.add(this.group);
+
+                this.radius = THREE.MathUtils.randFloat(0.8 * SCENE_SCALE, 1.2 * SCENE_SCALE);
+                this.baseSpeed = THREE.MathUtils.randFloat(1.5 * SCENE_SCALE, 3.0 * SCENE_SCALE);
+                
+                const colorVariant = Math.random();
+                if (colorVariant < 0.33) {
+                     this.color = new THREE.Color(0.5, 1.0, 0.8); 
+                } else if (colorVariant < 0.66) {
+                     this.color = new THREE.Color(0.6, 0.8, 1.0); 
+                } else {
+                     this.color = new THREE.Color(0.9, 0.9, 1.0); 
+                }
+
+                const cometGeo = new THREE.DodecahedronGeometry(this.radius, 0);
+                
+                this.material = new THREE.MeshStandardMaterial({ 
+                    color: 0xaaaaaa, 
+                    roughness: 0.8,  
+                    metalness: 0.2,
+                    flatShading: true, 
+                    emissive: this.color,
+                    emissiveIntensity: 0.0 
+                });
+                this.mesh = new THREE.Mesh(cometGeo, this.material);
+                
+                this.mesh.scale.set(
+                    THREE.MathUtils.randFloat(0.8, 1.2),
+                    THREE.MathUtils.randFloat(0.8, 1.2),
+                    THREE.MathUtils.randFloat(0.8, 1.2)
+                );
+
+                this.mesh.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
+                this.group.add(this.mesh);
+
+                this.glowSprite = new THREE.Sprite(new THREE.SpriteMaterial({ 
+                    map: new THREE.TextureLoader().load('https://threejs.org/examples/textures/sprites/glow.png'), 
+                    color: this.color, 
+                    transparent: true, 
+                    blending: THREE.AdditiveBlending,
+                    opacity: 0.0 
+                }));
+                this.glowSprite.scale.set(this.radius * 25, this.radius * 25, 1.0); 
+                this.mesh.add(this.glowSprite); 
+
+                const startAngle = THREE.MathUtils.randFloat(0, Math.PI * 2);
+                const startX = Math.cos(startAngle) * COMET_SPAWN_DIST;
+                const startZ = Math.sin(startAngle) * COMET_SPAWN_DIST;
+                const startY = THREE.MathUtils.randFloat(-300 * SCENE_SCALE, 300 * SCENE_SCALE);
+                this.group.position.set(startX, startY, startZ);
+
+                const toSun = new THREE.Vector3().sub(this.group.position).normalize();
+                const tangent = new THREE.Vector3(-toSun.z, THREE.MathUtils.randFloat(-0.5, 0.5), toSun.x).normalize();
+                
+                this.velocity = toSun.multiplyScalar(this.baseSpeed * 0.7)
+                                     .add(tangent.multiplyScalar(this.baseSpeed * 0.5));
+
+                this.tailGroup = new THREE.Group();
+                this.scene.add(this.tailGroup); // WICHTIG: Schweif direkt zur Szene hinzufügen
+                
+                this.age = 0;
+
+                this.mesh.userData.info = {
+                    name: 'Komet (Vagabund)', 
+                    type: 'comet', 
+                    radius_km: `ca. ${Math.round(this.radius * 5)} km`, 
+                    velocity: `ca. ${Math.round(this.baseSpeed * 25000)} km/h`,
+                    funFacts: [
+                        'Kometen sind "schmutzige Schneebälle" aus Eis, Staub und Gestein.',
+                        'Ihr Schweif entsteht erst in Sonnennähe, wenn das Eis verdampft (sublimiert).',
+                        'Der Schweif zeigt immer von der Sonne weg, getrieben durch den Sonnenwind.'
+                    ]
+                };
+                clickableObjects.push(this.mesh);
+            }
+
+            update(deltaTime) {
+                const sunPos = new THREE.Vector3(0,0,0);
+                const toSun = new THREE.Vector3().subVectors(sunPos, this.group.position);
+                const distanceSq = toSun.lengthSq();
+                const distance = Math.sqrt(distanceSq);
+                
+                const safeDistanceSq = Math.max(distanceSq, (SUN_RADIUS * 3) * (SUN_RADIUS * 3));
+                
+                // 1. Starke Anziehungskraft berechnen
+                let acceleration = toSun.normalize().multiplyScalar(GRAVITY_STRENGTH / safeDistanceSq);
+                
+                // 2. Beschleunigung dämpfen, um übermässigen Tempozuwachs zu verhindern
+                acceleration.multiplyScalar(GRAVITY_FACTOR); 
+                
+                this.velocity.add(acceleration.multiplyScalar(deltaTime));
+                this.group.position.add(this.velocity.clone().multiplyScalar(deltaTime));
+
+                this.mesh.rotation.x += deltaTime * 0.1; 
+                this.mesh.rotation.y += deltaTime * 0.15;
+
+                const activeDist = EARTH_DISTANCE * 4.5;
+                const intensity = 1.0 - Math.min(1.0, distance / activeDist); 
+                
+                this.material.roughness = 0.9 - (intensity * 0.7); 
+                this.material.emissiveIntensity = intensity * 1.5; 
+                this.glowSprite.material.opacity = Math.pow(intensity, 2) * 0.8; 
+
+                this.generateTail(distance, intensity); 
+                this.updateTail(deltaTime);
+                
+                const isMovingAway = this.group.position.dot(this.velocity) > 0;
+
+                if (distance > COMET_DESTROY_DIST && isMovingAway) {
+                    this.destroy();
+                    return true; 
+                }
+                this.age += deltaTime;
+                return false; 
+            }
+
+            generateTail(sunDistance, intensity) {
+                if (intensity <= 0.05) return;
+
+                // NEU: Höhere Partikelemission (häufiger Partikel erzeugen)
+                // Je höher die Intensity (Nähe zur Sonne), desto unwahrscheinlicher wird der "return" (Abbruch)
+                if (Math.random() > intensity + 0.1) return; 
+
+                const particleGeo = new THREE.SphereGeometry(this.radius * THREE.MathUtils.randFloat(0.2, 0.5), 4, 4);
+                const particleMat = new THREE.MeshBasicMaterial({ 
+                    color: this.color.clone().lerp(new THREE.Color(0xffffff), 0.5), 
+                    transparent: true, 
+                    opacity: intensity * 0.5,
+                    blending: THREE.AdditiveBlending 
+                });
+                const particleMesh = new THREE.Mesh(particleGeo, particleMat);
+                particleMesh.position.copy(this.group.position);
+                
+                const fromSun = this.group.position.clone().normalize(); 
+                const oppositeVelocity = this.velocity.clone().normalize().negate(); 
+                
+                // Mischung aus Sonnenwind-Richtung (von der Sonne weg) und Anti-Bewegung (hinter dem Kometen)
+                const tailDir = new THREE.Vector3().addVectors(
+                    fromSun.multiplyScalar(intensity * 0.8), 
+                    oppositeVelocity.multiplyScalar(1.0 - intensity * 0.5)
+                ).normalize();
+
+                // Zufälligen Drift/Streuung hinzufügen
+                tailDir.x += THREE.MathUtils.randFloat(-0.1, 0.1);
+                tailDir.y += THREE.MathUtils.randFloat(-0.1, 0.1);
+                tailDir.z += THREE.MathUtils.randFloat(-0.1, 0.1);
+
+                this.particles.push({
+                    mesh: particleMesh,
+                    velocity: tailDir.multiplyScalar(THREE.MathUtils.randFloat(5 * SCENE_SCALE, 15 * SCENE_SCALE)),
+                    drift: new THREE.Vector3( 
+                        THREE.MathUtils.randFloat(-1, 1),
+                        THREE.MathUtils.randFloat(-1, 1),
+                        THREE.MathUtils.randFloat(-1, 1)
+                    ).multiplyScalar(2.0 * SCENE_SCALE), 
+                    lifetime: THREE.MathUtils.randFloat(8.0, 15.0), 
+                    age: 0,
+                    initialOpacity: particleMat.opacity
+                });
+                this.tailGroup.add(particleMesh);
+            }
+
+            updateTail(deltaTime) {
+                const newParticles = [];
+                for (let i = 0; i < this.particles.length; i++) {
+                    const p = this.particles[i];
+                    p.velocity.add(p.drift.clone().multiplyScalar(deltaTime * 0.1));
+                    p.mesh.position.add(p.velocity.clone().multiplyScalar(deltaTime));
+                    p.age += deltaTime;
+                    const lifeRatio = p.age / p.lifetime;
+                    if (lifeRatio >= 1.0) {
+                        this.tailGroup.remove(p.mesh);
+                        p.mesh.geometry.dispose();
+                        p.mesh.material.dispose();
+                    } else {
+                        p.mesh.material.opacity = p.initialOpacity * (1.0 - lifeRatio);
+                        p.mesh.scale.setScalar(1.0 + (lifeRatio * 5.0)); 
+                        newParticles.push(p);
+                    }
+                }
+                this.particles = newParticles;
+            }
+
+            destroy() {
+                if (cameraFocus === this.mesh) {
+                    setFocus(sun, 3.0);
+                }
+                if (followCometBtn) followCometBtn.style.display = 'none';
+
+                this.particles.forEach(p => {
+                    this.tailGroup.remove(p.mesh);
+                    p.mesh.geometry.dispose();
+                    p.mesh.material.dispose();
+                });
+                this.particles = [];
+                this.group.remove(this.mesh);
+                this.scene.remove(this.group);
+                this.scene.remove(this.tailGroup); 
+                this.mesh.geometry.dispose();
+                this.material.dispose(); 
+                this.glowSprite.material.dispose();
+
+                const index = clickableObjects.indexOf(this.mesh);
+                if (index > -1) clickableObjects.splice(index, 1);
+            }
+        }
+        // ----------------------------------------
         
         // --- DOM-Elemente ---
         const container = document.getElementById('container');
         const playPauseBtn = document.getElementById('play-pause-btn');
-        const daySlider = document.getElementById('day-slider');
-        const dayLabel = document.getElementById('day-label');
         const speedSlider = document.getElementById('speed-slider');
-        const speedLabel = document.getElementById('speed-label');
         const orbitCheckbox = document.getElementById('orbit-checkbox');
         const infoBox = document.getElementById('info-box');
         
-        // MODIFIZIERT: Aufgeteilte Checkboxen
         const planetsVisibleCheckbox = document.getElementById('planets-visible-checkbox');
         const planetsOrbitCheckbox = document.getElementById('planets-orbit-checkbox');
         const planetFocusContainer = document.getElementById('planet-focus-buttons');
@@ -474,11 +881,11 @@
         const demoSpeedSlider = document.getElementById('demo-speed-slider');
         const demoSpeedLabel = document.getElementById('demo-speed-label');
         
-        // --- Shader (Erde & ANDERE PLANETEN) ---
+        // --- Shader ---
+        // (Alle Shader bleiben unverändert)
         const earthVertexShader = `
             varying vec2 vUv;
             varying vec3 vWorldPosition;
-            
             void main() {
                 vUv = uv;
                 vWorldPosition = (modelMatrix * vec4(position, 1.0)).xyz;
@@ -490,42 +897,79 @@
             uniform vec3 uSunPosition;
             uniform vec3 uObjectWorldPosition;
             uniform float uNightBrightness;
-            
             uniform bool uSofiDemoActive;
             uniform vec3 uMoonPosition;
             uniform float uMoonRadius;
             uniform float uSunRadius;
-            
             varying vec2 vUv;
             varying vec3 vWorldPosition;
-            
             float calculateMoonShadowIntensity(vec3 pixelPos, vec3 moonPos, float moonRadius, vec3 sunPos, float sunRadius) {
-                
                 vec3 sunToMoon = moonPos - sunPos;
                 vec3 shadowAxis = normalize(sunToMoon);
-
                 vec3 sunToPixel = pixelPos - sunPos;
-                
                 float depthInShadow = dot(sunToPixel, shadowAxis);
                 if (depthInShadow < 0.0) return 1.0; 
-
                 vec3 closestPointOnAxis = sunPos + shadowAxis * depthInShadow;
-                
                 float pixelDistanceToAxis = distance(pixelPos, closestPointOnAxis);
-
                 float umbraRadius = moonRadius * 0.1;
                 float penumbraRadius = moonRadius * 1.0; 
-
-                if (pixelDistanceToAxis > penumbraRadius) {
-                    return 1.0;
-                }
-
-                if (pixelDistanceToAxis < umbraRadius) {
-                    return 0.0;
-                }
-
+                if (pixelDistanceToAxis > penumbraRadius) return 1.0;
+                if (pixelDistanceToAxis < umbraRadius) return 0.0;
                 float progress = (pixelDistanceToAxis - umbraRadius) / (penumbraRadius - umbraRadius);
                 return mix(0.4, 0.9, progress);
+            }
+            void main() {
+                vec3 objectToSun = normalize(uSunPosition - uObjectWorldPosition);
+                vec3 objectToFragment = normalize(vWorldPosition - uObjectWorldPosition);
+                float intensity = (dot(objectToFragment, objectToSun) + 1.0) / 2.0;
+                float nightBrightness = uNightBrightness;
+                float lightMix = smoothstep(0.48, 0.59, intensity);
+                vec4 dayColor = texture2D(dayTexture, vUv);
+                vec4 nightColor = dayColor * nightBrightness;
+                vec4 finalColor = mix(nightColor, dayColor, lightMix);
+                if (uSofiDemoActive) {
+                    if (intensity > 0.01) { 
+                        float moonShadowIntensity = calculateMoonShadowIntensity(vWorldPosition, uMoonPosition, uMoonRadius, uSunPosition, uSunRadius);
+                        finalColor.rgb *= moonShadowIntensity;
+                    }
+                }
+                gl_FragColor = finalColor;
+            }
+        `;
+
+        // --- Shader speziell für Saturn mit Ringschatten auf dem Planeten ---
+        const saturnFragmentShader = `
+            uniform sampler2D dayTexture;
+            uniform vec3 uSunPosition;
+            uniform vec3 uObjectWorldPosition; // Saturn Center World Pos
+            uniform float uNightBrightness;
+            
+            // Ringschatten Uniforms
+            uniform vec3 uRingNormal;
+            uniform float uRingInnerRadius;
+            uniform float uRingOuterRadius;
+            uniform float uRingShadowSoftness;
+            
+            // Konstanter Wert für die maximale Reduzierung des Schattens
+            const float uShadowIntensityFactor = 0.85;
+
+            varying vec2 vUv;
+            varying vec3 vWorldPosition; // Fragment World Pos
+
+            float calculateRingShadow(vec3 fragPos, vec3 sunPos, vec3 planetPos, vec3 ringNormal, float innerR, float outerR, float softness) {
+                vec3 lightDir = normalize(sunPos - fragPos);
+                float denom = dot(lightDir, ringNormal);
+                if (abs(denom) < 0.0001) return 0.0; 
+
+                float t = dot(planetPos - fragPos, ringNormal) / denom;
+                if (t < 0.0) return 0.0; 
+
+                vec3 intersectPos = fragPos + t * lightDir;
+                float distToCenter = distance(intersectPos, planetPos);
+                
+                float shadow = smoothstep(innerR - softness, innerR, distToCenter) * (1.0 - smoothstep(outerR, outerR + softness, distToCenter));
+                
+                return clamp(shadow, 0.0, 1.0);
             }
             
             void main() {
@@ -533,37 +977,74 @@
                 vec3 objectToFragment = normalize(vWorldPosition - uObjectWorldPosition);
                 
                 float intensity = (dot(objectToFragment, objectToSun) + 1.0) / 2.0;
-                
                 float nightBrightness = uNightBrightness;
                 float lightMix = smoothstep(0.48, 0.59, intensity);
                 
                 vec4 dayColor = texture2D(dayTexture, vUv);
                 vec4 nightColor = dayColor * nightBrightness;
-                
                 vec4 finalColor = mix(nightColor, dayColor, lightMix);
 
-                if (uSofiDemoActive) {
-                    if (intensity > 0.01) { 
-                        float moonShadowIntensity = calculateMoonShadowIntensity(
-                            vWorldPosition, 
-                            uMoonPosition, 
-                            uMoonRadius,
-                            uSunPosition,
-                            uSunRadius
-                        );
-                        finalColor.rgb *= moonShadowIntensity;
-                    }
+                // Ringschatten anwenden (nur wenn Tagseite beleuchtet ist)
+                if (intensity > 0.48) { 
+                    float ringShadowMask = calculateRingShadow(
+                        vWorldPosition, 
+                        uSunPosition, 
+                        uObjectWorldPosition, 
+                        uRingNormal, 
+                        uRingInnerRadius, 
+                        uRingOuterRadius, 
+                        uRingShadowSoftness
+                    );
+                    
+                    vec3 shadowedColor = mix(finalColor.rgb, nightColor.rgb * uShadowIntensityFactor, ringShadowMask);
+                    finalColor.rgb = shadowedColor;
                 }
 
                 gl_FragColor = finalColor;
             }
         `;
-        
-        // --- Shader (Mond) ---
+        // -----------------------------------------------------------------------
+
+        const genericMoonFragmentShader = `
+            uniform sampler2D dayTexture;
+            uniform vec3 uSunPosition;
+            uniform vec3 uObjectWorldPosition;
+            uniform float uNightBrightness;
+            uniform vec3 uParentPosition;
+            uniform float uParentRadius;
+            varying vec2 vUv;
+            varying vec3 vWorldPosition;
+            float calculateParentShadow(vec3 fragPos, vec3 parentPos, float parentRadius, vec3 sunPos) {
+                 vec3 sunToParent = parentPos - sunPos;
+                 vec3 sunToFrag = fragPos - sunPos;
+                 vec3 shadowAxis = normalize(sunToParent);
+                 float distOnAxis = dot(fragPos - parentPos, shadowAxis);
+                 if (distOnAxis < 0.0) return 1.0; 
+                 vec3 closestPoint = parentPos + shadowAxis * distOnAxis;
+                 float distFromAxis = distance(fragPos, closestPoint);
+                 float umbra = parentRadius * 0.95;
+                 float penumbra = parentRadius * 1.1;
+                 return smoothstep(umbra, penumbra, distFromAxis);
+            }
+            void main() {
+                vec4 textureColor = texture2D(dayTexture, vUv);
+                vec3 objectToSun = normalize(uSunPosition - uObjectWorldPosition);
+                vec3 objectToFragment = normalize(vWorldPosition - uObjectWorldPosition);
+                float intensity = (dot(objectToFragment, objectToSun) + 1.0) / 2.0;
+                float nightBrightness = uNightBrightness;
+                float lightMix = smoothstep(0.48, 0.59, intensity);
+                vec4 nightColor = textureColor * nightBrightness;
+                vec4 finalColor = mix(nightColor, textureColor, lightMix);
+                if (intensity > 0.01) {
+                    float shadow = calculateParentShadow(vWorldPosition, uParentPosition, uParentRadius, uSunPosition);
+                    finalColor.rgb *= mix(uNightBrightness, 1.0, shadow);
+                }
+                gl_FragColor = finalColor;
+            }
+        `;
         const moonVertexShader = `
             varying vec2 vUv;
             varying vec3 vWorldPosition;
-            
             void main() {
                 vUv = uv;
                 vWorldPosition = (modelMatrix * vec4(position, 1.0)).xyz;
@@ -575,65 +1056,40 @@
             uniform vec3 uSunPosition;
             uniform vec3 uEarthPosition;
             uniform vec3 uObjectWorldPosition;
-            
             uniform float uEarthRadius;
             uniform float uSunRadius;
             uniform float uMoonRadius;
             uniform float uNightBrightness;
-            
             uniform bool uDemoActive;
             uniform float uShadowBrightness;
             uniform float uRedOverlayIntensity;
-
             varying vec2 vUv;
             varying vec3 vWorldPosition;
-
             float calculateShadowIntensity(vec3 pixelPos, vec3 earthPos, float earthRadius, vec3 sunPos, float sunRadius) {
-                
                 vec3 sunToEarth = earthPos - sunPos;
                 vec3 shadowAxis = normalize(sunToEarth);
-
                 vec3 sunToPixel = pixelPos - sunPos;
-                
                 float depthInShadow = dot(sunToPixel, shadowAxis);
                 if (depthInShadow < 0.0) return 1.0;
-
                 vec3 closestPointOnAxis = sunPos + shadowAxis * depthInShadow;
-                
                 float pixelDistanceToAxis = distance(pixelPos, closestPointOnAxis);
-
                 float umbraRadius = uEarthRadius * 0.9;
-                
                 float startRatio = 0.95; 
                 float endRatio = 1.05;   
-                
                 float intensity = smoothstep(umbraRadius * startRatio, umbraRadius * endRatio, pixelDistanceToAxis);
-                
                 return intensity; 
             }
-
             void main() {
                 vec4 textureColor = texture2D(dayTexture, vUv);
-                
                 vec3 objectToSun = normalize(uSunPosition - uObjectWorldPosition);
                 vec3 objectToFragment = normalize(vWorldPosition - uObjectWorldPosition);
                 float sunLightIntensity = (dot(objectToFragment, objectToSun) + 1.0) / 2.0;
                 float nightBrightness = uNightBrightness;
                 float sunLightMix = smoothstep(0.5, 0.6, sunLightIntensity);
-                
                 vec4 sunLitColor = mix(textureColor * nightBrightness, textureColor, sunLightMix);
-
                 if (uDemoActive) {
                     vec4 finalColor = vec4(sunLitColor.rgb, 1.0);
-
-                    float earthShadowIntensity = calculateShadowIntensity(
-                        vWorldPosition, 
-                        uEarthPosition, 
-                        uEarthRadius, 
-                        uSunPosition, 
-                        uSunRadius
-                    );
-
+                    float earthShadowIntensity = calculateShadowIntensity(vWorldPosition, uEarthPosition, uEarthRadius, uSunPosition, uSunRadius);
                     if (earthShadowIntensity < 1.0) {
                         if (earthShadowIntensity == 0.0) {
                             finalColor.rgb = mix(finalColor.rgb, finalColor.rgb * uShadowBrightness, sunLightMix);
@@ -641,25 +1097,18 @@
                              finalColor.rgb *= (1.0 - (1.0 - earthShadowIntensity) * sunLightMix); 
                         }
                     }
-                    
                     vec3 bloodMoonColor = vec3(1.0, 0.2, 0.0);
                     float redMixAmount = uRedOverlayIntensity * sunLightMix * 0.4;
-                    
                     finalColor.rgb = mix(finalColor.rgb, bloodMoonColor, redMixAmount);
-                    
                     gl_FragColor = finalColor;
-
                 } else {
                     gl_FragColor = sunLitColor;
                 }
             }
         `;
-        
-        // --- Shader (Saturn-Ring) ---
         const ringVertexShader = `
             varying vec2 vUv;
             varying vec3 vWorldPosition;
-            
             void main() {
                 vUv = uv;
                 vWorldPosition = (modelMatrix * vec4(position, 1.0)).xyz;
@@ -672,38 +1121,31 @@
             uniform vec3 uSaturnPosition;
             uniform float uSaturnRadius;
             uniform float uNightBrightness;
-            
             varying vec2 vUv;
             varying vec3 vWorldPosition;
-
             float getShadow(vec3 fragPos, vec3 shadowCasterPos, float casterRadius, vec3 sunPos) {
                 vec3 sunToCaster = normalize(shadowCasterPos - sunPos);
                 vec3 casterToFrag = fragPos - shadowCasterPos;
-
                 float distOnAxis = dot(casterToFrag, sunToCaster);
                 if (distOnAxis < 0.0) return 1.0;
-
                 vec3 closestPointOnAxis = shadowCasterPos + sunToCaster * distOnAxis;
                 float distToAxis = distance(fragPos, closestPointOnAxis);
-                
                 return smoothstep(casterRadius * 0.9, casterRadius * 1.1, distToAxis);
             }
-
             void main() {
                 vec4 texColor = texture2D(ringTexture, vUv);
-                
                 float shadowIntensity = getShadow(vWorldPosition, uSaturnPosition, uSaturnRadius, uSunPosition);
-                
                 vec4 nightColor = vec4(texColor.rgb * uNightBrightness, texColor.a);
-                
                 gl_FragColor = mix(nightColor, texColor, shadowIntensity);
-                
                 gl_FragColor.a *= texColor.a;
             }
         `;
 
         // --- Initialisierung ---
         function init() {
+            infoToastButton = document.getElementById('info-toast-button');
+            followCometBtn = document.getElementById('follow-comet-btn'); 
+
             scene = new THREE.Scene();
             camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 5000);
             camera.position.set(EARTH_DISTANCE * 1.5, EARTH_DISTANCE * 0.7, EARTH_DISTANCE * 1.5);
@@ -717,21 +1159,18 @@
             controls = new THREE.OrbitControls(camera, renderer.domElement);
             controls.enableDamping = true;
             controls.dampingFactor = 0.1;
-            controls.touches = {
-                ONE: 0,
-                TWO: 2
-            };
+            controls.touches = { ONE: 0, TWO: 2 };
             
-            // NEU: Hinzufügen eines Listeners, der merkt, wenn der Benutzer
-            // die Kamera manuell bewegt.
             controls.addEventListener('start', () => {
                 isUserControllingCamera = true;
+                if (infoToastButton) {
+                    infoToastButton.style.display = 'none';
+                    currentSelectedInfo = null;
+                }
             });
             
-            // --- NEU: Raycaster initialisieren ---
             raycaster = new THREE.Raycaster();
             mouse = new THREE.Vector2();
-            // --- ENDE NEU ---
 
             definePlanetData();
             createSolarSystem();
@@ -741,497 +1180,344 @@
             animate();
             
             window.addEventListener('resize', onWindowResize);
-            
-            // --- MODIFIZIERT: Klick- und Touch-Listener ---
-            window.addEventListener('click', onMouseClick, false);      // Für Maus
-            window.addEventListener('touchstart', onTouchStart, false); // Für Touch-Beginn
-            window.addEventListener('touchmove', onTouchMove, false);   // Für Touch-Bewegung
-            window.addEventListener('touchend', onTouchEnd, false);     // Für Touch-Ende (Tippen)
-            // --- ENDE MODIFIZIERT ---
+            window.addEventListener('click', onMouseClick, false);
+            window.addEventListener('touchstart', onTouchStart, false);
+            window.addEventListener('touchmove', onTouchMove, false);
+            window.addEventListener('touchend', onTouchEnd, false);
+
+            // --- Key Listener für Komet und UFO ---
+            window.addEventListener('keydown', (e) => {
+                // UFO Spawn (Shift + U)
+                if (e.shiftKey && (e.key === 'U' || e.key === 'u')) {
+                    if (ufoState === 'inactive') {
+                        spawnUFO();
+                    }
+                }
+                // Komet Spawn (Shift + K)
+                if (e.shiftKey && (e.key === 'K' || e.key === 'k')) {
+                    if (!comet) { // Nur einen Kometen zulassen
+                         spawnComet();
+                    }
+                }
+            });
+            // --------------------------------------
             
             updatePositions(currentDay);
-            // MODIFIZIERT: Starte mit Sprung (Dauer 0), nicht mit updateCamera
             setFocus(sun, 0); 
+            
+            if (isPlaying) {
+                 playPauseBtn.classList.add('playing');
+            }
         }
         
-        // --- Planetendaten (MODIFIZIERT: Pluto hinzugefügt + INFODATEN) ---
         function definePlanetData() {
             const textureBasePath = 'https://cdn.jsdelivr.net/gh/NisuSchnisuu/Simulation-Mondphasen@main/Images/';
+            const moonTextureBasePath = 'https://cdn.jsdelivr.net/gh/NisuSchnisuu/Simulation-Mondphasen@main/Images/';
+            const degToRad = Math.PI / 180;
             
-            // --- MODIFIZIERT: funFact zu funFacts Array geändert + Hardfacts ---
             planetsData = [
                 { 
-                    name: 'Mercury', 
-                    radius: 1.0 * SCENE_SCALE, 
-                    distance: 60 * SCENE_SCALE, 
-                    yearDays: 88, 
-                    texture: textureBasePath + '2k_mercury.jpg',
-                    axialTilt: 0.03,
-                    rotationSpeed: 0.017,
-                    // NEU: Info-Daten
-                    name_de: 'Merkur',
-                    realRadius_km: 2439,
-                    earthCompareRadius: '0,38x Erde',
-                    realDistance_Mio_km: 57.9,
-                    lightMinutes: 3.2,
-                    taglaenge: '176 Erdtage',
-                    temperatur: '-173°C bis 427°C',
-                    funFacts: [
-                        'Auf Merkur dauert ein Tag (176 Erdtage) länger als ein Jahr (88 Erdtage).',
-                        'Er hat keine Monde und keine nennenswerte Atmosphäre.',
-                        'Trotz seiner Nähe zur Sonne ist er nicht der heisseste Planet (das ist die Venus).'
-                    ]
+                    name: 'Mercury', radius: 1.0 * SCENE_SCALE, distance: 60 * SCENE_SCALE, yearDays: 88, texture: textureBasePath + '2k_mercury.jpg', axialTilt: 0.03, rotationSpeed: 0.017,
+                    ecc: 0.205, perihelionAngle: 77.45 * degToRad, orbitalInclination: 7.0,
+                    name_de: 'Merkur', earthCompareRadius: '0,38x Erde', radius_km: '2.439', distance_Mio_km: '57,9 Mio. km', umlaufzeit: '88 Erdtage', taglaenge: '176 Erdtage', temperatur: 'ca. 167°C',
+                    funFacts: ['Auf Merkur dauert ein Tag (176 Erdtage) länger als ein Jahr (88 Erdtage).', 'Er hat keine Monde und keine nennenswerte Atmosphäre.', 'Trotz seiner Nähe zur Sonne ist er nicht der heisseste Planet.']
                 },
                 { 
-                    name: 'Venus', 
-                    radius: 2.2 * SCENE_SCALE, 
-                    distance: 110 * SCENE_SCALE, 
-                    yearDays: 225, 
-                    texture: textureBasePath + '2k_venus_surface.jpg',
-                    axialTilt: 177.0,
-                    rotationSpeed: -0.0041,
-                    // NEU: Info-Daten
-                    name_de: 'Venus',
-                    realRadius_km: 6051,
-                    earthCompareRadius: '0,95x Erde',
-                    realDistance_Mio_km: 108.2,
-                    lightMinutes: 6.0,
-                    taglaenge: '243 Erdtage (retrograd)',
-                    atmosphaere: '96% CO2',
-                    temperatur: '464°C (Durchschnitt)',
-                    funFacts: [
-                        'Die Venus dreht sich "rückwärts" (retrograd).',
-                        'Ein Tag auf der Venus (243 Erdtage) ist länger als ihr Jahr (225 Erdtage).',
-                        'Ihre dichte Atmosphäre aus Kohlendioxid erzeugt einen extremen Treibhauseffekt (heissester Planet).'
-                    ]
+                    name: 'Venus', radius: 2.2 * SCENE_SCALE, distance: 110 * SCENE_SCALE, yearDays: 225, texture: textureBasePath + '2k_venus_surface.jpg', axialTilt: 177.0, rotationSpeed: -0.0041,
+                    ecc: 0.007, perihelionAngle: 131.53 * degToRad, orbitalInclination: 3.39,
+                    name_de: 'Venus', earthCompareRadius: '0,95x Erde', radius_km: '6.051', distance_Mio_km: '108,2 Mio. km', umlaufzeit: '225 Erdtage', taglaenge: '243 Erdtage (rückwärts!)', temperatur: 'ca. 464°C (heissester Planet)',
+                    funFacts: ['Die Venus dreht sich "rückwärts" (retrograd).', 'Ein Tag auf der Venus ist länger als ihr Jahr (Umlauf um die Sonne).', 'Ihre dichte CO2-Atmosphäre erzeugt einen extremen Treibhauseffekt.']
                 },
                 { 
-                    name: 'Mars', 
-                    radius: 1.5 * SCENE_SCALE, 
-                    distance: 230 * SCENE_SCALE, 
-                    yearDays: 687, 
-                    texture: textureBasePath + '2k_mars.jpg',
-                    axialTilt: 25.19,
-                    rotationSpeed: 0.97,
-                    // NEU: Info-Daten
-                    name_de: 'Mars',
-                    realRadius_km: 3389,
-                    earthCompareRadius: '0,53x Erde',
-                    realDistance_Mio_km: 227.9,
-                    lightMinutes: 12.7,
-                    taglaenge: '24,6 Stunden',
-                    atmosphaere: '95% CO2 (sehr dünn)',
-                    temperatur: '-63°C (Durchschnitt)',
-                    funFacts: [
-                        'Der Mars beherbergt den Olympus Mons, den höchsten Vulkan im Sonnensystem (ca. 22 km hoch).',
-                        'Er hat zwei kleine Monde: Phobos und Deimos.',
-                        'Seine rote Farbe stammt von Eisenoxid (Rost) auf der Oberfläche.'
-                    ]
+                    name: 'Mars', radius: 1.5 * SCENE_SCALE, distance: 230 * SCENE_SCALE, yearDays: 687, texture: textureBasePath + '2k_mars.jpg', axialTilt: 25.19, rotationSpeed: 0.97,
+                    ecc: 0.094, perihelionAngle: 336.04 * degToRad, orbitalInclination: 1.85,
+                    name_de: 'Mars', earthCompareRadius: '0,53x Erde', radius_km: '3.389', distance_Mio_km: '227,9 Mio. km', umlaufzeit: '687 Erdtage', taglaenge: '24h 37min', temperatur: 'ca. -63°C',
+                    funFacts: ['Der Mars hat den höchsten Vulkan im Sonnensystem (Olympus Mons, 22km hoch).', 'Er hat zwei kleine Monde: Phobos und Deimos.', 'Seine rote Farbe kommt von Eisenoxid (Rost) im Boden.']
                 },
                 { 
-                    name: 'Jupiter', 
-                    radius: 16.0 * SCENE_SCALE, 
-                    distance: 500 * SCENE_SCALE, 
-                    yearDays: 4333, 
-                    texture: textureBasePath + '2k_jupiter.jpg',
-                    axialTilt: 3.13,
-                    rotationSpeed: 2.43,
-                    // NEU: Info-Daten
-                    name_de: 'Jupiter',
-                    realRadius_km: 69911,
-                    earthCompareRadius: '10,97x Erde',
-                    realDistance_Mio_km: 778.5,
-                    lightMinutes: 43.2,
-                    taglaenge: '9,9 Stunden',
-                    atmosphaere: 'H, He',
-                    schwerkraft: '2,53 g',
-                    funFacts: [
-                        'Jupiter hat über 90 bekannte Monde, darunter die vier "Galileischen Monde".',
-                        'Ein Tag auf Jupiter dauert nur knapp 10 Stunden (schnellste Rotation).',
-                        'Der "Große Rote Fleck" ist ein riesiger Sturm, der größer ist als die Erde.'
-                    ]
+                    name: 'Jupiter', radius: 16.0 * SCENE_SCALE, distance: 500 * SCENE_SCALE, yearDays: 4333, texture: textureBasePath + '2k_jupiter.jpg', axialTilt: 3.13, rotationSpeed: 2.43,
+                    ecc: 0.049, perihelionAngle: 14.75 * degToRad, orbitalInclination: 1.3,
+                    moons: [
+                        { 
+                            name: 'Io', radius: 0.4 * SCENE_SCALE, distance: 22 * SCENE_SCALE, speed: 3.1, texture: moonTextureBasePath + 'jupiter_io.jpg', inclination: 0.05 * degToRad,
+                            earthCompareRadius: '0,28x Erde', radius_km: '1.821', distance_Mio_km: '421.700 km', umlaufzeit: '1,77 Tage', temperatur: 'ca. -143°C', parentName: 'Jupiter',
+                            funFacts: ['Io ist der vulkanisch aktivste Körper im Sonnensystem.', 'Seine Oberfläche wird durch die Schwerkraft von Jupiter ständig "durchgeknetet".']
+                        },
+                        { 
+                            name: 'Europa', radius: 0.35 * SCENE_SCALE, distance: 34 * SCENE_SCALE, speed: 2.3, texture: moonTextureBasePath + 'jupiter_europa.jpg', inclination: 0.47 * degToRad,
+                            earthCompareRadius: '0,25x Erde', radius_km: '1.560', distance_Mio_km: '671.100 km', umlaufzeit: '3,55 Tage', temperatur: 'ca. -170°C', parentName: 'Jupiter',
+                            funFacts: ['Europa hat einen Ozean aus flüssigem Wasser unter seiner Eiskruste.', 'Er gilt als einer der aussichtsreichsten Orte für ausserirdisches Leben.']
+                        },
+                        { 
+                            name: 'Ganymed', radius: 0.6 * SCENE_SCALE, distance: 46 * SCENE_SCALE, speed: 1.3, texture: moonTextureBasePath + 'jupiter_ganymede.jpg', inclination: 0.20 * degToRad,
+                            earthCompareRadius: '0,41x Erde', radius_km: '2.634', distance_Mio_km: '1,07 Mio. km', umlaufzeit: '7,15 Tage', temperatur: 'ca. -163°C', parentName: 'Jupiter',
+                            funFacts: ['Ganymed ist der größte Mond im Sonnensystem (größer als Merkur!).', 'Er ist der einzige Mond mit einem eigenen Magnetfeld.']
+                        },
+                        { 
+                            name: 'Kallisto', radius: 0.55 * SCENE_SCALE, distance: 59 * SCENE_SCALE, speed: 0.93, texture: moonTextureBasePath + 'jupiter_callisto.jpg', inclination: 0.20 * degToRad,
+                            earthCompareRadius: '0,38x Erde', radius_km: '2.410', distance_Mio_km: '1,88 Mio. km', umlaufzeit: '16,69 Tage', temperatur: 'ca. -139°C', parentName: 'Jupiter',
+                            funFacts: ['Kallisto hat eine der ältesten, am stärksten verkraterten Oberflächen im Sonnensystem.']
+                        }
+                    ],
+                    name_de: 'Jupiter', earthCompareRadius: '11,2x Erde', radius_km: '69.911', distance_Mio_km: '778,5 Mio. km', umlaufzeit: '11,9 Jahre', taglaenge: '9h 56min', temperatur: 'ca. -108°C',
+                    funFacts: ['Jupiter ist der größte Planet und hat über 90 Monde.', 'Der "Große Rote Fleck" ist ein riesiger Wirbelsturm, der schon seit Jahrhunderten tobt.']
                 },
                 { 
-                    name: 'Saturn', 
-                    radius: 13.0 * SCENE_SCALE, 
-                    distance: 750 * SCENE_SCALE, 
-                    yearDays: 10759, 
-                    texture: textureBasePath + '2k_saturn.jpg',
-                    ringTexture: textureBasePath + '2k_saturn_ring_alpha.png',
-                    axialTilt: 26.73,
-                    rotationSpeed: 2.22,
-                    // NEU: Info-Daten
-                    name_de: 'Saturn',
-                    realRadius_km: 58232,
-                    earthCompareRadius: '9,14x Erde',
-                    realDistance_Mio_km: 1433.5,
-                    lightMinutes: 79.6,
-                    taglaenge: '10,7 Stunden',
-                    atmosphaere: 'H, He',
-                    ringe: '99,9% Wassereis',
-                    funFacts: [
-                        'Saturns Ringe bestehen hauptsächlich aus Eispartikeln, Staub und Gestein.',
-                        'Er hat die geringste Dichte aller Planeten – er würde auf Wasser schwimmen.',
-                        'Saturn hat über 80 Monde, der größte ist Titan, der eine eigene Atmosphäre besitzt.'
-                    ]
+                    name: 'Saturn', radius: 13.0 * SCENE_SCALE, distance: 750 * SCENE_SCALE, yearDays: 10759, texture: textureBasePath + '2k_saturn.jpg', ringTexture: textureBasePath + '2k_saturn_ring_alpha.png', axialTilt: 26.73, rotationSpeed: 2.22,
+                    ecc: 0.057, perihelionAngle: 92.43 * degToRad, orbitalInclination: 2.49,
+                    moons: [
+                        { 
+                            name: 'Titan', radius: 0.55 * SCENE_SCALE, distance: 40 * SCENE_SCALE, speed: 1.3, texture: moonTextureBasePath + 'saturn_titan.jpg', inclination: 0.35 * degToRad,
+                            earthCompareRadius: '0,40x Erde', radius_km: '2.574', distance_Mio_km: '1,22 Mio. km', umlaufzeit: '15,95 Tage', temperatur: 'ca. -179°C', parentName: 'Saturn',
+                            funFacts: ['Titan ist der einzige Mond mit einer dichten Atmosphäre.', 'Es gibt dort Seen und Flüsse aus flüssigem Methan und Ethan.']
+                        }
+                    ],
+                    name_de: 'Saturn', earthCompareRadius: '9,5x Erde', radius_km: '58.232', distance_Mio_km: '1,43 Mrd. km', umlaufzeit: '29,5 Jahre', taglaenge: '10h 34min', temperatur: 'ca. -139°C',
+                    funFacts: ['Saturns beeindruckende Ringe bestehen fast nur aus Eisbrocken und Staub.', 'Er hat die geringste Dichte aller Planeten – er würde in einer riesigen Badewanne schwimmen!']
                 },
                 { 
-                    name: 'Uranus', 
-                    radius: 6.0 * SCENE_SCALE, 
-                    distance: 900 * SCENE_SCALE, 
-                    yearDays: 30687, 
-                    texture: textureBasePath + '2k_uranus.jpg',
-                    axialTilt: 97.77,
-                    rotationSpeed: 1.38,
-                    // NEU: Info-Daten
-                    name_de: 'Uranus',
-                    realRadius_km: 25362,
-                    earthCompareRadius: '3,98x Erde',
-                    realDistance_Mio_km: 2872.5,
-                    lightMinutes: 159.6,
-                    taglaenge: '17,2 Stunden',
-                    atmosphaere: 'H, He, Methan',
-                    achsneigung: '97,8°',
-                    funFacts: [
-                        'Uranus "rollt" auf seiner Bahn, da seine Achse um 98 Grad geneigt ist.',
-                        'Er ist ein "Eisriese", dessen Atmosphäre hauptsächlich aus Wasserstoff, Helium und Methan besteht.',
-                        'Sein Methan absorbiert rotes Licht, was ihm seine blaugrüne Farbe gibt.'
-                    ]
+                    name: 'Uranus', radius: 6.0 * SCENE_SCALE, distance: 900 * SCENE_SCALE, yearDays: 30687, texture: textureBasePath + '2k_uranus.jpg', axialTilt: 97.77, rotationSpeed: 1.38,
+                    ecc: 0.046, perihelionAngle: 170.96 * degToRad, orbitalInclination: 0.77,
+                    name_de: 'Uranus', earthCompareRadius: '4,0x Erde', radius_km: '25.362', distance_Mio_km: '2,87 Mrd. km', umlaufzeit: '84 Jahre', taglaenge: '17h 14min', temperatur: 'ca. -197°C',
+                    funFacts: ['Uranus "rollt" auf seiner Bahn, da seine Achse um fast 98 Grad geneigt ist.', 'Er ist ein Eisriese und erscheint durch Methan in seiner Atmosphäre blau-grün.']
                 },
                 { 
-                    name: 'Neptune', 
-                    radius: 5.8 * SCENE_SCALE, 
-                    distance: 1100 * SCENE_SCALE, 
-                    yearDays: 60190, 
-                    texture: textureBasePath + '2k_neptune.jpg',
-                    axialTilt: 28.32,
-                    rotationSpeed: 1.49,
-                    // NEU: Info-Daten
-                    name_de: 'Neptun',
-                    realRadius_km: 24622,
-                    earthCompareRadius: '3,86x Erde',
-                    realDistance_Mio_km: 4495.1,
-                    lightMinutes: 249.7,
-                    taglaenge: '16,1 Stunden',
-                    atmosphaere: 'H, He, Methan',
-                    wind: 'Bis 2.100 km/h',
-                    funFacts: [
-                        'Auf Neptun herrschen die stärksten Winde im Sonnensystem (bis zu 2.100 km/h).',
-                        'Er ist der am weitesten von der Sonne entfernte Planet.',
-                        'Seit seiner Entdeckung im Jahr 1846 hat er 2011 erst einen vollen Sonnenumlauf vollendet.'
-                    ]
+                    name: 'Neptune', radius: 5.8 * SCENE_SCALE, distance: 1100 * SCENE_SCALE, yearDays: 60190, texture: textureBasePath + '2k_neptune.jpg', axialTilt: 28.32, rotationSpeed: 1.49,
+                    ecc: 0.009, perihelionAngle: 44.97 * degToRad, orbitalInclination: 1.77,
+                    name_de: 'Neptun', earthCompareRadius: '3,9x Erde', radius_km: '24.622', distance_Mio_km: '4,50 Mrd. km', umlaufzeit: '165 Jahre', taglaenge: '16h 6min', temperatur: 'ca. -201°C',
+                    funFacts: ['Auf Neptun wehen die schnellsten Winde im Sonnensystem (bis zu 2.100 km/h).', 'Er wurde 1846 durch mathematische Berechnungen entdeckt, bevor man ihn im Teleskop sah.']
                 },
-                // --- NEU: Pluto ---
                 {
-                    name: 'Pluto',
-                    radius: 0.5 * SCENE_SCALE, // Sehr klein
-                    distance: 1300 * SCENE_SCALE, // Weiter weg als Neptun
-                    yearDays: 90582, // ca. 248 Erdjahre
-                    texture: textureBasePath + '2k_pluto.jpg', 
-                    axialTilt: 122.5, // Extreme Achsenneigung
-                    orbitalInclination: 17.16, // Starke Bahnneigung
-                    rotationSpeed: -0.156,
-                    // NEU: Info-Daten
-                    name_de: 'Pluto (Zwergplanet)',
-                    realRadius_km: 1188,
-                    earthCompareRadius: '0,18x Erde',
-                    realDistance_Mio_km: 5906.4,
-                    lightMinutes: 328.1,
-                    taglaenge: '6,4 Erdtage',
-                    atmosphaere: 'N, Methan, CO (dünn)',
-                    temperatur: '-229°C (Durchschnitt)',
-                    funFacts: [
-                        'Pluto wurde 2006 zum "Zwergplaneten" herabgestuft.',
-                        'Er hat 5 bekannte Monde, der größte (Charon) ist fast halb so groß wie Pluto selbst.',
-                        'Seine Umlaufbahn ist so elliptisch, dass er der Sonne manchmal näher ist als Neptun.'
-                    ]
+                    name: 'Pluto', radius: 0.5 * SCENE_SCALE, distance: 1300 * SCENE_SCALE, yearDays: 90582, texture: textureBasePath + '2k_pluto.jpg', axialTilt: 122.5, rotationSpeed: -0.156,
+                    ecc: 0.244, perihelionAngle: 224.07 * degToRad, orbitalInclination: 17.16, 
+                    name_de: 'Pluto (Zwergplanet)', earthCompareRadius: '0,19x Erde', radius_km: '1.188', distance_Mio_km: '5,9 Mrd. km (im Schnitt)', umlaufzeit: '248 Jahre', taglaenge: '6,4 Tage', temperatur: 'ca. -229°C',
+                    funFacts: ['Pluto wurde 2006 vom Planeten zum "Zwergplaneten" umklassifiziert.', 'Seine Bahn ist so elliptisch, dass er zeitweise näher an der Sonne ist als Neptun.']
                 }
-                // --- ENDE NEU ---
             ];
         }
 
-        // --- Himmelskörper erstellen ---
-        // (MODIFIZIERT: Bahneigung für Pluto + userData.info hinzugefügt)
         function createSolarSystem() {
             const textureLoader = new THREE.TextureLoader();
 
-            // 1. Sternenhimmel
             const starGeometry = new THREE.SphereGeometry(3500, 32, 32); 
             const starTexture = textureLoader.load('https://cdn.jsdelivr.net/gh/NisuSchnisuu/Simulation-Mondphasen@main/8k_stars.jpg');
-            const starMaterial = new THREE.MeshBasicMaterial({
-                map: starTexture,
-                side: THREE.BackSide 
-            });
+            const starMaterial = new THREE.MeshBasicMaterial({ map: starTexture, side: THREE.BackSide });
             starField = new THREE.Mesh(starGeometry, starMaterial);
             scene.add(starField);
 
-            // 2. Sonne
 	        const sunTexture = textureLoader.load('https://cdn.jsdelivr.net/gh/NisuSchnisuu/Simulation-Mondphasen@main/2k_sun.jpg');
             const sunMaterial = new THREE.MeshBasicMaterial({ map: sunTexture });
 	        sun = new THREE.Mesh(new THREE.SphereGeometry(SUN_RADIUS, 32, 32), sunMaterial);
             
-            // --- MODIFIZIERT: Info-Daten für Sonne ---
+            // --- NEU: Lichtquelle für Standard-Materialien (wie den Kometen) ---
+            const sunLight = new THREE.PointLight(0xffffff, 1.5, 0, 2);
+            sun.add(sunLight);
+            // -------------------------------------------------------------------
+
             sun.userData.info = {
-                name: 'Sonne',
-                radius_km: '695.700',
-                earthCompareRadius: '109x Erde',
-                oberflaeche_temp: 'ca. 5.500 °C',
-                kerntemperatur: 'ca. 15 Mio. °C',
-                zusammensetzung: '74% Wasserstoff, 24% Helium',
-                alter: 'ca. 4,6 Mrd. Jahre',
-                funFacts: [
-                    'Die Sonne macht 99,86% der Masse unseres Sonnensystems aus.',
-                    'Sie ist ein Stern vom Typ "Gelber Zwerg".',
-                    'Das Licht der Sonne braucht ca. 8,3 Minuten bis zur Erde.'
-                ]
+                name: 'Sonne', earthCompareRadius: '109x Erde', radius_km: '696.340', oberflaeche_temp: 'ca. 5.500 °C', zusammensetzung: 'Wasserstoff, Helium',
+                funFacts: ['Die Sonne macht 99,86% der gesamten Masse unseres Sonnensystems aus.', 'Sie ist ein Stern vom Typ "Gelber Zwerg" und etwa 4,6 Milliarden Jahre alt.']
             };
-            clickableObjects.push(sun); // Zum Klicken hinzufügen
-            // --- ENDE MODIFIZIERT ---
-            
+            clickableObjects.push(sun); 
             scene.add(sun);
             
-            // 3. Erde
-            earthPivot = new THREE.Group();
-            scene.add(earthPivot);
+            earthTiltPivot = new THREE.Group();
+            earthTiltPivot.position.set(EARTH_DISTANCE, 0, 0);
+            scene.add(earthTiltPivot);
+            earthTiltPivot.rotation.z = EARTH_TILT_RAD;
 
             const earthMaterial = new THREE.ShaderMaterial({
-                vertexShader: earthVertexShader,
-                fragmentShader: earthFragmentShader,
+                vertexShader: earthVertexShader, fragmentShader: earthFragmentShader,
                 uniforms: {
                     dayTexture: { value: textureLoader.load('https://stemkoski.github.io/Three.js/images/earth-day.jpg') },
-                    uSunPosition: { value: new THREE.Vector3(0, 0, 0) },
-                    uObjectWorldPosition: { value: new THREE.Vector3() },
-                    uNightBrightness: { value: 0.3 }, 
-                    uSofiDemoActive: { value: false },
-                    uMoonPosition: { value: new THREE.Vector3() },
-                    uMoonRadius: { value: MOON_RADIUS },
-                    uSunRadius: { value: SUN_RADIUS } 
+                    uSunPosition: { value: new THREE.Vector3(0, 0, 0) }, uObjectWorldPosition: { value: new THREE.Vector3() }, uNightBrightness: { value: 0.3 }, 
+                    uSofiDemoActive: { value: false }, uMoonPosition: { value: new THREE.Vector3() }, uMoonRadius: { value: MOON_RADIUS }, uSunRadius: { value: SUN_RADIUS } 
                 }
             });
             earth = new THREE.Mesh(new THREE.SphereGeometry(EARTH_RADIUS, 32, 32), earthMaterial);
-            earth.position.x = EARTH_DISTANCE;
-            earth.rotation.order = 'YXZ'; 
-            earth.rotation.z = EARTH_TILT_RAD; 
             
-            // --- MODIFIZIERT: Info-Daten für Erde ---
             earth.userData.info = {
-                name: 'Erde',
-                radius_km: '6.371',
-                earthCompareRadius: '1x Erde',
-                distance_Mio_km: '149,6',
-                distanceType: 'Abstand zur Sonne',
-                lightTime: '8,3 Minuten (von Sonne)',
-                taglaenge: '23,9 Stunden',
-                atmosphaere: '78% N, 21% O2',
-                temperatur: '15°C (Durchschnitt)',
-                funFacts: [ 
-                    'Die Erde ist der einzige uns bekannte Planet, auf dem es flüssiges Wasser an der Oberfläche gibt.',
-                    'Sie ist der dichteste Planet im Sonnensystem.',
-                    'Das Magnetfeld der Erde schützt uns vor Sonnenwinden.'
-                ]
+                name: 'Erde', earthCompareRadius: '1x Erde', radius_km: '6.371', distance_Mio_km: '149,6 Mio. km', umlaufzeit: '365,25 Tage', taglaenge: '23h 56min', temperatur: 'ca. +15°C',
+                funFacts: [ 'Die Erde ist der einzige bekannte Planet mit flüssigem Wasser an der Oberfläche.', 'Unsere Atmosphäre schützt uns vor schädlicher Sonnenstrahlung und Meteoriten.']
             };
-            clickableObjects.push(earth); // Zum Klicken hinzufügen
-            // --- ENDE MODIFIZIERT ---
-            
-            earthPivot.add(earth);
+            clickableObjects.push(earth); 
+            earthTiltPivot.add(earth); 
 
-            // 4. Mond
             moonPivot = new THREE.Group();
             moonPivot.rotation.x = MOON_TILT_RAD; 
             scene.add(moonPivot); 
 
             originalMoonMaterial = new THREE.ShaderMaterial({
-                vertexShader: moonVertexShader,
-                fragmentShader: moonFragmentShader,
+                vertexShader: moonVertexShader, fragmentShader: moonFragmentShader,
                 uniforms: {
                     dayTexture: { value: textureLoader.load('https://cdn.jsdelivr.net/gh/NisuSchnisuu/Simulation-Mondphasen@main/2k_moon.jpg') },
-                    uSunPosition: { value: new THREE.Vector3(0, 0, 0) },
-                    uEarthPosition: { value: new THREE.Vector3() },
-                    uObjectWorldPosition: { value: new THREE.Vector3() },
-                    uEarthRadius: { value: EARTH_RADIUS },
-                    uSunRadius: { value: SUN_RADIUS },
-                    uMoonRadius: { value: MOON_RADIUS },
-                    uNightBrightness: { value: 0.3 },
-                    uDemoActive: { value: false },
-                    uShadowBrightness: { value: 0.0 }, 
-                    uRedOverlayIntensity: { value: 0.0 } 
+                    uSunPosition: { value: new THREE.Vector3(0, 0, 0) }, uEarthPosition: { value: new THREE.Vector3() }, uObjectWorldPosition: { value: new THREE.Vector3() },
+                    uEarthRadius: { value: EARTH_RADIUS }, uSunRadius: { value: SUN_RADIUS }, uMoonRadius: { value: MOON_RADIUS }, uNightBrightness: { value: 0.3 },
+                    uDemoActive: { value: false }, uShadowBrightness: { value: 0.0 }, uRedOverlayIntensity: { value: 0.0 } 
                 }
             });
             moon = new THREE.Mesh(new THREE.SphereGeometry(MOON_RADIUS, 32, 32), originalMoonMaterial);
             moon.position.x = -MOON_DISTANCE; 
             
-            // --- MODIFIZIERT: Info-Daten für Mond ---
             moon.userData.info = {
-                name: 'Mond',
-                radius_km: '1.737',
-                earthCompareRadius: '0,27x Erde',
-                distance_Mio_km: '384.400 km (im Schnitt)', // 384.400 km
-                distanceType: 'Abstand zur Erde',
-                lightTime: '1,3 Sekunden (von Erde)',
-                umlaufzeit: '27,3 Erdtage',
-                taglaenge: '27,3 Erdtage',
-                temperatur: '-173°C (Nacht) bis 127°C (Tag)',
-                funFacts: [ 
-                    'Der Mond entfernt sich jedes Jahr etwa 3,8 cm von der Erde.',
-                    'Er hat eine "gebundene Rotation", weshalb wir immer dieselbe Seite sehen.',
-                    'Die Schwerkraft des Mondes verursacht die Gezeiten (Ebbe und Flut) auf der Erde.'
-                ]
+                name: 'Mond', earthCompareRadius: '0,27x Erde', radius_km: '1.737', distance_Mio_km: '384.400 km', umlaufzeit: '27,3 Tage', temperatur: '-173°C bis +127°C', parentName: 'Erde',
+                funFacts: [ 'Der Mond zeigt uns immer dieselbe Seite, weil er sich genau einmal pro Umlauf um sich selbst dreht.', 'Seine Anziehungskraft verursacht Ebbe und Flut auf der Erde.']
             };
-            clickableObjects.push(moon); // Zum Klicken hinzufügen
-            // --- ENDE MODIFIZIERT ---
-            
+            clickableObjects.push(moon); 
             moonPivot.add(moon);
             
-            // 5. Andere Planeten
             planetsData.forEach(data => {
-                const pivot = new THREE.Group();
+                const sunOrbitPivot = new THREE.Group();
+                if (data.orbitalInclination) sunOrbitPivot.rotation.x = (data.orbitalInclination * Math.PI) / 180;
+                scene.add(sunOrbitPivot);
                 
-                // --- NEU: Bahneigung (Inklination) ---
-                if (data.orbitalInclination) {
-                    pivot.rotation.x = (data.orbitalInclination * Math.PI) / 180;
+                const planetSystemContainer = new THREE.Group();
+                sunOrbitPivot.add(planetSystemContainer);
+
+                const planetTiltPivot = new THREE.Group();
+                planetTiltPivot.rotation.z = (data.axialTilt * Math.PI) / 180;
+                planetSystemContainer.add(planetTiltPivot);
+
+                let material;
+                if (data.name === 'Saturn') {
+                     material = new THREE.ShaderMaterial({
+                        vertexShader: earthVertexShader, fragmentShader: saturnFragmentShader, 
+                        uniforms: {
+                            dayTexture: { value: textureLoader.load(data.texture) }, uSunPosition: { value: new THREE.Vector3(0, 0, 0) }, uObjectWorldPosition: { value: new THREE.Vector3() },
+                            uNightBrightness: { value: 0.3 }, 
+                            uRingNormal: { value: new THREE.Vector3(0, 1, 0) }, 
+                            uRingInnerRadius: { value: data.radius * RING_INNER_RADIUS_SCALE },
+                            uRingOuterRadius: { value: data.radius * RING_OUTER_RADIUS_SCALE },
+                            uRingShadowSoftness: { value: RING_SHADOW_SOFTNESS }
+                        }
+                    });
+                    saturnPlanetMaterial = material;
+                } else {
+                    material = new THREE.ShaderMaterial({
+                        vertexShader: earthVertexShader, fragmentShader: earthFragmentShader, 
+                        uniforms: {
+                            dayTexture: { value: textureLoader.load(data.texture) }, uSunPosition: { value: new THREE.Vector3(0, 0, 0) }, uObjectWorldPosition: { value: new THREE.Vector3() },
+                            uNightBrightness: { value: 0.3 }, uSofiDemoActive: { value: false }, uMoonPosition: { value: new THREE.Vector3() }, uMoonRadius: { value: 0.1 }, uSunRadius: { value: SUN_RADIUS } 
+                        }
+                    });
                 }
-                // --- ENDE NEU ---
-                
-                scene.add(pivot);
-                
-                const material = new THREE.ShaderMaterial({
-                    vertexShader: earthVertexShader,
-                    fragmentShader: earthFragmentShader,
-                    uniforms: {
-                        dayTexture: { value: textureLoader.load(data.texture) },
-                        uSunPosition: { value: new THREE.Vector3(0, 0, 0) },
-                        uObjectWorldPosition: { value: new THREE.Vector3() },
-                        uNightBrightness: { value: 0.3 },
-                        uSofiDemoActive: { value: false },
-                        uMoonPosition: { value: new THREE.Vector3() },
-                        uMoonRadius: { value: 0.1 },
-                        uSunRadius: { value: SUN_RADIUS } 
-                    }
-                });
 
                 const planet = new THREE.Mesh(new THREE.SphereGeometry(data.radius, 32, 32), material);
-                planet.position.x = data.distance;
-                
-                planet.rotation.order = 'YXZ';
-                planet.rotation.z = (data.axialTilt * Math.PI) / 180;
+                planet.position.set(0, 0, 0); 
 
-                // --- MODIFIZIERT: Info-Daten für Planeten ---
-                // Kopiert alle Daten aus dem planetsData-Eintrag in userData.info
                 planet.userData.info = { ...data }; 
-                
-                // (Diese Felder werden nicht im Popup gebraucht)
-                delete planet.userData.info.name; 
-                delete planet.userData.info.radius;
-                delete planet.userData.info.distance;
-                delete planet.userData.info.yearDays;
-                delete planet.userData.info.texture;
-                delete planet.userData.info.ringTexture;
-                delete planet.userData.info.axialTilt;
-                delete planet.userData.info.orbitalInclination;
-                delete planet.userData.info.rotationSpeed;
-                
-                planet.userData.info.name = data.name_de; // Sicherstellen, dass der deutsche Name da ist
-                
-                clickableObjects.push(planet); // Zum Klicken hinzufügen
-                // --- ENDE MODIFIZIERT ---
+                delete planet.userData.info.name; delete planet.userData.info.radius; delete planet.userData.info.distance; delete planet.userData.info.yearDays; delete planet.userData.info.texture; delete planet.userData.info.ringTexture; delete planet.userData.info.axialTilt; delete planet.userData.info.orbitalInclination; delete planet.userData.info.rotationSpeed; delete planet.userData.info.moons; delete planet.userData.info.ecc; delete planet.userData.info.perihelionAngle;
+                planet.userData.info.name = data.name_de;
+                clickableObjects.push(planet);
 
-                // Speziell für Saturn: Ring hinzufügen
                 if (data.name === 'Saturn') {
                     const ringTexture = textureLoader.load(data.ringTexture);
                     ringTexture.wrapT = THREE.RepeatWrapping;
-
                     saturnRingMaterial = new THREE.ShaderMaterial({
-                        vertexShader: ringVertexShader,
-                        fragmentShader: ringFragmentShader,
+                        vertexShader: ringVertexShader, fragmentShader: ringFragmentShader, 
                         uniforms: {
-                            ringTexture: { value: ringTexture },
-                            uSunPosition: { value: new THREE.Vector3(0, 0, 0) },
-                            uSaturnPosition: { value: new THREE.Vector3() },
-                            uSaturnRadius: { value: data.radius },
-                            uNightBrightness: { value: 0.3 }
+                            ringTexture: { value: ringTexture }, uSunPosition: { value: new THREE.Vector3(0, 0, 0) }, uSaturnPosition: { value: new THREE.Vector3() },
+                            uSaturnRadius: { value: data.radius }, uNightBrightness: { value: 0.3 }
                         },
-                        transparent: true,
-                        side: THREE.DoubleSide
+                        transparent: true, side: THREE.DoubleSide
                     });
-
-                    const ringGeometry = new THREE.RingGeometry(data.radius * 1.2, data.radius * 2.2, 64);
-                    
+                    const ringGeometry = new THREE.RingGeometry(data.radius * RING_INNER_RADIUS_SCALE, data.radius * RING_OUTER_RADIUS_SCALE, 64);
                     ringGeometry.rotateX(Math.PI / 2); 
-                    
-                    const pos = ringGeometry.attributes.position;
-                    const uv = ringGeometry.attributes.uv;
-                    const innerRadius = data.radius * 1.2;
-                    const outerRadius = data.radius * 2.2;
-                    const repeatFactor = 10; 
-                    
+                    const pos = ringGeometry.attributes.position; const uv = ringGeometry.attributes.uv; const innerRadius = data.radius * RING_INNER_RADIUS_SCALE; const outerRadius = data.radius * RING_OUTER_RADIUS_SCALE; const repeatFactor = 10; 
                     for (let i = 0; i < pos.count; i++) {
-                        const x = pos.getX(i);
-                        const z = pos.getZ(i);
+                        const x = pos.getX(i); const z = pos.getZ(i);
                         let angle = 1.0 - ((Math.atan2(z, x) / (Math.PI * 2)) + 0.5);
-                        let v = angle * repeatFactor;
-                        const r = Math.sqrt(x * x + z * z);
+                        let v = angle * repeatFactor; const r = Math.sqrt(x * x + z * z);
                         let u = (r - innerRadius) / (outerRadius - innerRadius);
                         uv.setXY(i, u, v);
                     }
-                    
                     const ringMesh = new THREE.Mesh(ringGeometry, saturnRingMaterial);
-                    planet.add(ringMesh);
+                    planetTiltPivot.add(ringMesh); 
                 }
-                
-                pivot.add(planet);
+                planetTiltPivot.add(planet); 
 
+                if (data.moons) {
+                    data.moons.forEach(moonData => {
+                        const moonOrbitPivot = new THREE.Group();
+                        if (data.name === 'Saturn' || data.name === 'Jupiter') {
+                            moonOrbitPivot.rotation.x = moonData.inclination || 0; 
+                            planetTiltPivot.add(moonOrbitPivot);
+                        } else {
+                            moonOrbitPivot.rotation.x = (Math.random() * 10 - 5) * Math.PI / 180;
+                            planetSystemContainer.add(moonOrbitPivot);
+                        }
+                        const moonMat = new THREE.ShaderMaterial({
+                            vertexShader: earthVertexShader, fragmentShader: genericMoonFragmentShader, 
+                            uniforms: {
+                                dayTexture: { value: textureLoader.load(moonData.texture) }, uSunPosition: { value: new THREE.Vector3(0, 0, 0) }, uObjectWorldPosition: { value: new THREE.Vector3() },
+                                uNightBrightness: { value: 0.3 }, uParentPosition: { value: new THREE.Vector3() }, uParentRadius: { value: data.radius }
+                            }
+                        });
+                        const moonMesh = new THREE.Mesh(new THREE.SphereGeometry(moonData.radius, 32, 32), moonMat);
+                        moonMesh.position.x = moonData.distance;
+                        moonOrbitPivot.add(moonMesh);
+                        otherMoons.push({ mesh: moonMesh, pivot: moonOrbitPivot, speed: moonData.speed, data: moonData, parentPlanet: planet });
+                        
+                        const moonInfo = { ...moonData };
+                        delete moonInfo.name; delete moonInfo.radius; delete moonInfo.distance; delete moonInfo.speed; delete moonInfo.texture; delete moonInfo.inclination;
+                        moonMesh.userData.info = { name: `${data.name_de}-Mond: ${moonData.name}`, ...moonInfo };
+                        
+                        clickableObjects.push(moonMesh);
+                    });
+                }
                 otherPlanets.push(planet);
-                otherPlanetPivots.push(pivot);
+                otherPlanetControls.push({ orbit: sunOrbitPivot, container: planetSystemContainer, tiltPivot: planetTiltPivot });
             });
         }
 
-        // --- Umlaufbahnen (Linien) ---
-        // (MODIFIZIERT: Bahneigung für Pluto-Orbit)
         function createOrbits() {
-            const createOrbitLine = (radius, color, segments = 128) => {
+            const createEllipticalOrbitLine = (a, e, perihelionAngle, color, segments = 256) => {
                 const points = [];
                 for (let i = 0; i <= segments; i++) {
-                    const angle = (i / segments) * Math.PI * 2;
-                    points.push(new THREE.Vector3(Math.cos(angle) * radius, 0, Math.sin(angle) * radius));
+                    const nu = (i / segments) * Math.PI * 2;
+                    const r = a * (1 - e * e) / (1 + e * Math.cos(nu));
+                    const x_orb = r * Math.cos(nu);
+                    const z_orb = r * Math.sin(nu); 
+                    const x_final = x_orb * Math.cos(perihelionAngle) - z_orb * Math.sin(perihelionAngle);
+                    const z_final = x_orb * Math.sin(perihelionAngle) + z_orb * Math.cos(perihelionAngle);
+                    points.push(new THREE.Vector3(x_final, 0, -z_final)); 
                 }
-                const geometry = new THREE.BufferGeometry().setFromPoints(points);
-                const material = new THREE.LineBasicMaterial({ color: color });
-                return new THREE.Line(geometry, material);
+                return new THREE.Line(new THREE.BufferGeometry().setFromPoints(points), new THREE.LineBasicMaterial({ color: color }));
             };
 
-            earthOrbitLine = createOrbitLine(EARTH_DISTANCE, 0x0000FF);
+            const createCircleOrbit = (radius, color, segments = 128) => {
+                 const points = [];
+                 for (let i = 0; i <= segments; i++) {
+                     const angle = (i / segments) * Math.PI * 2;
+                     points.push(new THREE.Vector3(Math.cos(angle) * radius, 0, Math.sin(angle) * radius));
+                 }
+                 return new THREE.Line(new THREE.BufferGeometry().setFromPoints(points), new THREE.LineBasicMaterial({ color: color }));
+            };
+
+            earthOrbitLine = createCircleOrbit(EARTH_DISTANCE, 0x0000FF); 
             scene.add(earthOrbitLine);
 
-            moonOrbitLine = createOrbitLine(MOON_DISTANCE, 0xFFFF00);
+            moonOrbitLine = createCircleOrbit(MOON_DISTANCE, 0xFFFF00);
             moonOrbitLine.rotation.x = MOON_TILT_RAD; 
             scene.add(moonOrbitLine); 
             
             planetsData.forEach(data => {
-                const orbitLine = createOrbitLine(data.distance, 0x555555); // Grau
-                
-                // --- NEU: Bahneigung (Inklination) für Orbitlinie ---
-                if (data.orbitalInclination) {
-                    orbitLine.rotation.x = (data.orbitalInclination * Math.PI) / 180;
-                }
-                // --- ENDE NEU ---
-                
+                const orbitLine = createEllipticalOrbitLine(data.distance, data.ecc, data.perihelionAngle, 0x555555);
+                if (data.orbitalInclination) orbitLine.rotation.x = (data.orbitalInclination * Math.PI) / 180;
                 scene.add(orbitLine);
                 otherPlanetOrbits.push(orbitLine);
             });
         }
 
-        // --- UI-Einrichtung ---
-        // (MODIFIZIERT: Pluto-Button-Name + Popup-Schliessen-Listener)
         function setupUI() {
-            //Verbergen Button toggle
              const uiContainer = document.getElementById('ui-container');
             const toggleBtn = document.getElementById('toggle-ui');
             toggleBtn.addEventListener('click', () => {
                 uiContainer.classList.toggle('minimized');
-                toggleBtn.textContent = uiContainer.classList.contains('minimized') ? 'Anzeigen' : 'Verbergen';
+                toggleBtn.textContent = uiContainer.classList.contains('minimized') ? '☰' : '✕';
+                toggleBtn.title = uiContainer.classList.contains('minimized') ? 'Menü anzeigen' : 'Menü verbergen';
             });
             
-            //Orbit Checkbox
             orbitCheckbox.addEventListener('change', (e) => {
                 const isChecked = e.target.checked;
                 earthOrbitLine.visible = isChecked;
@@ -1240,61 +1526,36 @@
             earthOrbitLine.visible = orbitCheckbox.checked;
             moonOrbitLine.visible = orbitCheckbox.checked;
 
-            // --- MODIFIZIERT: Geteilte Checkboxen für Planeten und Bahnen ---
-
-            // 1. Checkbox für Planeten-Sichtbarkeit
             planetsVisibleCheckbox.addEventListener('change', (e) => {
                 const isVisible = e.target.checked;
-                otherPlanetPivots.forEach(pivot => {
-                    pivot.visible = isVisible;
-                });
-                // Das Anzeigen/Verbergen der Fokus-Buttons hängt nur von den Planeten ab
+                otherPlanetControls.forEach(ctrl => { ctrl.orbit.visible = isVisible; });
                 planetFocusContainer.style.display = isVisible ? 'flex' : 'none';
             });
-
-            // 2. Checkbox für Planetenbahn-Sichtbarkeit
             planetsOrbitCheckbox.addEventListener('change', (e) => {
                 const isVisible = e.target.checked;
-                otherPlanetOrbits.forEach(orbit => {
-                    orbit.visible = isVisible;
-                });
+                otherPlanetOrbits.forEach(orbit => { orbit.visible = isVisible; });
             });
-
-            // 3. Initialen Status für BEIDE setzen
             const planetsInitiallyVisible = planetsVisibleCheckbox.checked;
-            otherPlanetPivots.forEach(pivot => { pivot.visible = planetsInitiallyVisible; });
-            
+            otherPlanetControls.forEach(ctrl => { ctrl.orbit.visible = planetsInitiallyVisible; });
             const orbitsInitiallyVisible = planetsOrbitCheckbox.checked;
             otherPlanetOrbits.forEach(orbit => { orbit.visible = orbitsInitiallyVisible; });
-
-            // 4. Initialen Status der Planeten-Fokus-Buttons setzen (ersetzt die alte Logik am Ende von setupUI)
             planetFocusContainer.style.display = planetsInitiallyVisible ? 'flex' : 'none';
-            // --- ENDE MODIFIKATION ---
-
             
-            // Event-Listener für Dunkelheits-Slider
             darknessSlider.addEventListener('input', (e) => {
                 const brightness = parseFloat(e.target.value);
-                
                 earth.material.uniforms.uNightBrightness.value = brightness;
                 originalMoonMaterial.uniforms.uNightBrightness.value = brightness;
-                
-                otherPlanets.forEach(planet => {
-                    planet.material.uniforms.uNightBrightness.value = brightness;
-                });
-                
-                if (saturnRingMaterial) {
-                    saturnRingMaterial.uniforms.uNightBrightness.value = brightness;
-                }
-                
+                otherPlanets.forEach(planet => { planet.material.uniforms.uNightBrightness.value = brightness; });
+                otherMoons.forEach(moonObj => { moonObj.mesh.material.uniforms.uNightBrightness.value = brightness; });
+                if (saturnRingMaterial) saturnRingMaterial.uniforms.uNightBrightness.value = brightness;
                 darknessLabel.textContent = brightness.toFixed(2);
             });
             
-            //Speedslider Fix
             speedSlider.addEventListener('input', onSpeedSliderChange);
             onSpeedSliderChange(); 
-            //Play Button fix
             playPauseBtn.addEventListener('click', togglePlay);
+            
+            const daySlider = document.getElementById('day-slider');
             daySlider.addEventListener('input', () => {
                 pauseSimulation();
                 currentDay = parseFloat(daySlider.value);
@@ -1302,40 +1563,28 @@
                 updateUI();
             });
             
-            // Initialwert setzen
             const initialBrightness = parseFloat(darknessSlider.value);
             earth.material.uniforms.uNightBrightness.value = initialBrightness;
             originalMoonMaterial.uniforms.uNightBrightness.value = initialBrightness;
-            otherPlanets.forEach(planet => {
-                planet.material.uniforms.uNightBrightness.value = initialBrightness;
-            });
-            if (saturnRingMaterial) {
-                saturnRingMaterial.uniforms.uNightBrightness.value = initialBrightness;
-            }
+            otherPlanets.forEach(planet => { planet.material.uniforms.uNightBrightness.value = initialBrightness; });
+            otherMoons.forEach(moonObj => { moonObj.mesh.material.uniforms.uNightBrightness.value = initialBrightness; });
+            if (saturnRingMaterial) saturnRingMaterial.uniforms.uNightBrightness.value = initialBrightness;
             darknessLabel.textContent = initialBrightness.toFixed(2);
 
-
-            // Event Listener für Fokus (ruft jetzt setFocus mit Standard-Dauer auf)
             document.getElementById('focus-system').addEventListener('click', () => setFocus(sun));
             document.getElementById('focus-earth').addEventListener('click', () => setFocus(earth));
             document.getElementById('focus-moon').addEventListener('click', () => setFocus(moon));
 
-            // Listener für Ekliptik-Sicht (MODIFIZIERT: nutzt flyTo)
             document.getElementById('focus-ecliptic').addEventListener('click', () => {
-                cameraFocus = 'ecliptic_side_view'; // Behält den Logik-Namen
-                
+                cameraFocus = 'ecliptic_side_view'; 
                 let earthPos = new THREE.Vector3();
                 earth.getWorldPosition(earthPos);
-                
-                const target = new THREE.Vector3(0, 0, 0); // Schaut auf das Zentrum
-                
+                const target = new THREE.Vector3(0, 0, 0); 
                 let offset = earthPos.clone().normalize().multiplyScalar(40);
                 let sideOffset = new THREE.Vector3(-earthPos.z, 0, earthPos.x).normalize().multiplyScalar(4); 
-                
                 const endPos = earthPos.clone().add(offset).add(sideOffset);
-                endPos.y = 0; // Auf die Ekliptik-Ebene
-                
-                flyTo(endPos, target, 2.0, 'ecliptic_side_view'); // MODIFIZIERT: Dauer 1.0 -> 2.0
+                endPos.y = 0; 
+                flyTo(endPos, target, 2.0, 'ecliptic_side_view'); 
             });
 
             document.getElementById('demo-sofi').addEventListener('click', () => startDemo('sofi'));
@@ -1350,76 +1599,267 @@
                 btn.addEventListener('click', () => jumpToPhase(index));
                 moonPhaseButtons.push(btn);
             });
+
+            followCometBtn.addEventListener('click', () => {
+                if (comet && comet.mesh) {
+                    setFocus(comet.mesh, 1.5);
+                }
+            });
             
-            // Planeten-Fokus-Buttons dynamisch erstellen
             planetsData.forEach((data, index) => {
                 const btn = document.createElement('button');
                 btn.id = `focus-${data.name.toLowerCase()}`;
-                btn.className = 'btn btn-secondary';
-                
-                // --- MODIFIZY: Verwendet name_de und kürzt (Zwergplanet) ab ---
+                btn.className = 'btn btn-planet'; 
                 let btnName = data.name_de;
-                if (btnName.includes('(')) {
-                    btnName = btnName.split('(')[0].trim(); // "Pluto (Zwergplanet)" -> "Pluto"
+                
+                if (data.name === 'Pluto') {
+                    btnName = '(Pluto)';
+                } else if (btnName.includes('(')) {
+                    btnName = btnName.split('(')[0].trim(); 
                 }
-                btn.textContent = btnName;
-                // --- ENDE MODIFIZY ---
 
-                btn.addEventListener('click', () => {
-                    setFocus(otherPlanets[index]); // Nutzt jetzt animiertes setFocus
-                });
+                btn.textContent = btnName;
+                btn.addEventListener('click', () => setFocus(otherPlanets[index]));
                 planetFocusContainer.appendChild(btn);
             });
             
-            // --- NEU: Listener für Popup-Schliessen-Button ---
             document.getElementById('popup-close-btn').addEventListener('click', () => {
                 document.getElementById('info-popup').style.display = 'none';
             });
-            // --- ENDE NEU ---
-        }
-        
-        // --- NEU: Kamera-Flug-Funktion ---
-        /**
-         * Startet eine sanfte Kamera-Transition (Flug).
-         * @param {THREE.Vector3} endPos - Die Zielposition der Kamera.
-         * @param {THREE.Vector3} endTarget - Das Ziel, auf das die Kamera schauen soll.
-         * @param {number} duration - Dauer des Flugs in Sekunden.
-         * @param {Object | string} newFocusTarget - Das Objekt oder der Modus, der nach dem Flug fokussiert bleiben soll.
-         */
-        function flyTo(endPos, endTarget, duration = 1.0, newFocusTarget = null) {
-            // NEU: Jede automatische Kamerabewegung setzt den manuellen
-            // Steuerungs-Flag zurück.
-            isUserControllingCamera = false;
+            infoToastButton.addEventListener('click', () => {
+                if (currentSelectedInfo) {
+                    showInfoPopup(currentSelectedInfo);
+                    infoToastButton.style.display = 'none'; 
+                    currentSelectedInfo = null; 
+                }
+            });
 
-            // --- NEU: Abfangen für sofortigen Sprung ---
+            // --- UFO Dialog Listener ---
+            document.getElementById('ufo-yes-btn').addEventListener('click', () => {
+                document.getElementById('ufo-dialog-text').textContent = "Perfekt. Danke für die Hilfe. Wir sehen uns dann bald wieder. Ciao!";
+                document.getElementById('ufo-initial-buttons').style.display = 'none';
+                const closeGroup = document.getElementById('ufo-close-group');
+                closeGroup.style.display = 'flex';
+                
+                const closeBtn = document.getElementById('ufo-close-btn');
+                closeBtn.onclick = () => {
+                     document.getElementById('ufo-dialog').style.display = 'none';
+                     ufoState = 'leaving';
+                     ufoDepartureTarget = earth; 
+                     cameraFocus = 'ufo_to_earth'; 
+                     if (!isPlaying) togglePlay();
+                };
+            });
+
+            document.getElementById('ufo-no-btn').addEventListener('click', () => {
+                document.getElementById('ufo-dialog-text').textContent = "Schade. Dann suchen wir weiter. Gute Reise, Erdling.";
+                document.getElementById('ufo-initial-buttons').style.display = 'none';
+                const closeGroup = document.getElementById('ufo-close-group');
+                closeGroup.style.display = 'flex';
+
+                const closeBtn = document.getElementById('ufo-close-btn');
+                closeBtn.onclick = () => {
+                     document.getElementById('ufo-dialog').style.display = 'none';
+                     ufoState = 'leaving';
+                     ufoDepartureTarget = null; 
+                     ufoLeaveTimer = 0; 
+                     ufoTargetPos.set(
+                        (Math.random() - 0.5) * 20000,
+                        (Math.random() - 0.5) * 20000,
+                        (Math.random() - 0.5) * 20000
+                     );
+                     cameraFocus = ufo; 
+                     if (!isPlaying) togglePlay();
+                };
+            });
+            // --------------------------------
+        }
+
+        // --- Komet Funktionen ---
+        function spawnComet() {
+            if (comet) {
+                comet.destroy(); 
+            }
+            comet = new Comet(scene);
+            cometSpawnTimer = THREE.MathUtils.randFloat(600, 1200); 
+            
+            if (followCometBtn) followCometBtn.style.display = 'block';
+            
+            if (!isPlaying) togglePlay();
+        }
+        // -----------------------------
+
+
+        // --- UFO Funktionen ---
+        function createUFO() {
+            const ufoGroup = new THREE.Group();
+            const saucerGeo = new THREE.CylinderGeometry(0.5 * SCENE_SCALE, 1.5 * SCENE_SCALE, 0.3 * SCENE_SCALE, 16);
+            const saucerMat = new THREE.MeshStandardMaterial({ color: 0x888888, emissive: 0x444444, metalness: 0.8, roughness: 0.2 });
+            const saucer = new THREE.Mesh(saucerGeo, saucerMat);
+            ufoGroup.add(saucer);
+            const cockpitGeo = new THREE.SphereGeometry(0.6 * SCENE_SCALE, 16, 16, 0, Math.PI * 2, 0, Math.PI * 0.5);
+            const cockpitMat = new THREE.MeshStandardMaterial({ color: 0x00ffff, emissive: 0x00aaaa, metalness: 0.5, roughness: 0.1, transparent: true, opacity: 0.8 });
+            const cockpit = new THREE.Mesh(cockpitGeo, cockpitMat);
+            cockpit.position.y = 0.15 * SCENE_SCALE; 
+            ufoGroup.add(cockpit);
+
+            ufo = ufoGroup;
+            ufo.userData.isUFO = true; 
+            clickableObjects.push(ufo);
+            scene.add(ufo);
+        }
+
+        function spawnUFO() {
+            if (!ufo) createUFO();
+            ufoDepartureTarget = null; 
+            const startAngle = Math.random() * Math.PI * 2;
+            const startDist = 1500 * SCENE_SCALE;
+            ufo.position.set(
+                Math.cos(startAngle) * startDist,
+                (Math.random() - 0.5) * 300 * SCENE_SCALE,
+                Math.sin(startAngle) * startDist
+            );
+            ufoState = 'approaching_planet';
+            pickNextPlanetTarget();
+            ufo.visible = true;
+        }
+
+        function pickNextPlanetTarget() {
+            const potentialTargets = clickableObjects.filter(obj => obj !== ufo && !obj.userData.isUFO && obj !== ufoCurrentTargetObject);
+            if (potentialTargets.length > 0) {
+                const randomIndex = Math.floor(Math.random() * potentialTargets.length);
+                ufoCurrentTargetObject = potentialTargets[randomIndex];
+            } else {
+                 ufoCurrentTargetObject = sun;
+            }
+        }
+
+        function updateUFO(deltaTime) {
+            if (ufoState === 'inactive') {
+                ufoSpawnTimer -= deltaTime;
+                if (ufoSpawnTimer <= 0) {
+                    spawnUFO();
+                    ufoSpawnTimer = Math.random() * 300 + 180; 
+                }
+                return;
+            }
+
+            if (ufoCurrentTargetObject && (ufoState === 'approaching_planet' || ufoState === 'hovering')) {
+                let targetRadius = 5.0 * SCENE_SCALE;
+                if (ufoCurrentTargetObject.geometry && ufoCurrentTargetObject.geometry.parameters.radius) {
+                    targetRadius = ufoCurrentTargetObject.geometry.parameters.radius;
+                }
+                const planetWorldPos = new THREE.Vector3();
+                ufoCurrentTargetObject.getWorldPosition(planetWorldPos);
+                const sunSideDir = planetWorldPos.clone().normalize().negate(); 
+                sunSideDir.y += 0.5; 
+                sunSideDir.normalize();
+                const offsetDistance = targetRadius * 2.5 + 6 * SCENE_SCALE; 
+                ufoCurrentTargetObject.getWorldPosition(ufoTargetPos).add(sunSideDir.multiplyScalar(offsetDistance));
+            }
+
+            if (ufoState === 'approaching_planet' || ufoState === 'leaving') {
+                if (ufoState === 'leaving' && ufoDepartureTarget) {
+                     ufoDepartureTarget.getWorldPosition(ufoTargetPos);
+                     if (ufo.position.distanceTo(ufoTargetPos) < EARTH_RADIUS * 5) { 
+                          ufo.visible = false;
+                          ufoState = 'inactive';
+                          setFocus(earth); 
+                          resetUfoDialog();
+                          return;
+                     }
+                }
+
+                const direction = new THREE.Vector3().subVectors(ufoTargetPos, ufo.position);
+                const distance = direction.length();
+                let arrivalThreshold = 2.0 * SCENE_SCALE; 
+                let currentSpeed = UFO_SPEED;
+
+                if (ufoState === 'leaving') {
+                    if (ufoDepartureTarget) {
+                        currentSpeed = UFO_SPEED * 0.8;
+                    } else {
+                        ufoLeaveTimer += deltaTime;
+                        arrivalThreshold = 10.0 * SCENE_SCALE;
+                        if (ufoLeaveTimer < 3.0) {
+                             currentSpeed = UFO_SPEED * 0.5; 
+                             cameraFocus = ufo; 
+                        } else {
+                             currentSpeed = UFO_SPEED * 10.0; 
+                             cameraFocus = 'ufo_leaving_watch'; 
+                        }
+                        if (ufo.position.length() > 3000 * SCENE_SCALE || distance < arrivalThreshold) { 
+                              ufo.visible = false;
+                              ufoState = 'inactive';
+                              setFocus(sun, 3.0); 
+                              resetUfoDialog();
+                              return;
+                        }
+                    }
+                }
+
+                if (distance > arrivalThreshold) {
+                     direction.normalize();
+                     ufo.position.add(direction.multiplyScalar(currentSpeed * deltaTime));
+                     ufo.lookAt(ufoTargetPos); 
+                } else {
+                    if (ufoState === 'approaching_planet') {
+                        ufoState = 'hovering';
+                        ufoWanderTimer = Math.random() * 20 + 20; 
+                    } else if (ufoState === 'leaving' && !ufoDepartureTarget) {
+                          ufo.visible = false;
+                          ufoState = 'inactive';
+                          if (cameraFocus === ufo || cameraFocus === 'ufo_leaving_watch') setFocus(sun, 3.0); 
+                          resetUfoDialog();
+                    }
+                }
+            } else if (ufoState === 'hovering') {
+                 ufo.position.copy(ufoTargetPos);
+                 ufoWanderTimer -= deltaTime;
+                 ufo.rotation.y += deltaTime * 1.0; 
+                 if (ufoWanderTimer <= 0) {
+                    ufoState = 'approaching_planet';
+                    pickNextPlanetTarget();
+                }
+            }
+        }
+
+        function resetUfoDialog() {
+            document.getElementById('ufo-dialog-text').textContent = "Wir sind auf dem Weg zur Erde um diese zu übernehmen. Weißt du wo die ist?";
+            document.getElementById('ufo-initial-buttons').style.display = 'flex';
+            document.getElementById('ufo-close-group').style.display = 'none';
+        }
+        // ---------------------------
+        
+        function flyTo(endPos, endTarget, duration = 1.0, newFocusTarget = null) {
+            isUserControllingCamera = false;
             if (duration <= 0) {
                 camera.position.copy(endPos);
                 controls.target.copy(endTarget);
                 lastCameraTargetPos.copy(endTarget);
                 isCameraTransitioning = false;
                 cameraFocus = newFocusTarget;
-                return; // Beendet die Funktion hier
+                return; 
             }
-            // --- ENDE NEU ---
-            
             isCameraTransitioning = true;
             cameraTransitionProgress = 0.0;
             cameraTransitionDuration = duration;
-            
             cameraTransitionStartPos.copy(camera.position);
             cameraTransitionStartTarget.copy(controls.target);
-            
             cameraTransitionEndPos.copy(endPos);
             cameraTransitionEndTarget.copy(endTarget);
-            
-            cameraFocusAfterTransition = newFocusTarget; // z.B. earth, moon, 'earthView'
-            cameraFocus = 'transitioning'; // Sperrt die updateCamera-Logik
+            cameraFocusAfterTransition = newFocusTarget; 
+            cameraFocus = 'transitioning'; 
         }
         
-        // --- Event Handler ---
         function togglePlay() {
             isPlaying = !isPlaying;
             playPauseBtn.textContent = isPlaying ? 'Pause' : 'Play';
+            if (isPlaying) {
+                playPauseBtn.classList.add('playing');
+            } else {
+                playPauseBtn.classList.remove('playing');
+            }
             controls.enableZoom = true;
         }
 
@@ -1431,30 +1871,26 @@
         
         function onSpeedSliderChange() {
             const value = parseFloat(speedSlider.value); 
-            const minSpeed = 0.00005; 
+            const minSpeed = 0.00000005; 
             const normalSpeed = 1.0; 
-            const maxSpeed = 10.0;
+            const fastSpeed = 10.0;
+            const maxSpeed = 100.0; 
             
-            if (value <= 90) {
-                // --- MODIFIZIERT: Exponentielle Skala für bessere Kontrolle im langsamen Bereich ---
-                // (value / 90) wird quadriert, um den Slider am Anfang langsamer ansteigen zu lassen
-                const normalizedValue = (value / 90.0);
-                speed = minSpeed + (normalizedValue * normalizedValue) * (normalSpeed - minSpeed);
-                // --- ENDE MODIFIZIERT ---
+            if (value <= 80) {
+                const normalizedValue = (value / 80.0);
+                speed = minSpeed + (Math.pow(normalizedValue, 4)) * (normalSpeed - minSpeed);
+            } else if (value <= 90) {
+                const normalizedValue = (value - 80) / 10;
+                speed = normalSpeed + normalizedValue * (fastSpeed - normalSpeed);
             } else {
-                // Der schnelle Bereich bleibt linear
-                speed = normalSpeed + ((value - 90) / 10) * (maxSpeed - normalSpeed);
+                const normalizedValue = (value - 90) / 10;
+                speed = fastSpeed + normalizedValue * (maxSpeed - fastSpeed);
             }
-            
-            speedLabel.textContent = speed.toFixed(4) + 'x'; 
         }
         
         function onDemoSpeedSliderChange() {
             const value = parseFloat(demoSpeedSlider.value); 
-            const minSpeed = 0.01;
-            const normalSpeed = 0.1;
-            const maxSpeed = 1.0;
-            
+            const minSpeed = 0.01; const normalSpeed = 0.1; const maxSpeed = 1.0;
             if (value <= 50) {
                 demoLoopSpeed = minSpeed + (value / 50) * (normalSpeed - minSpeed);
             } else {
@@ -1463,87 +1899,84 @@
             demoSpeedLabel.textContent = demoLoopSpeed.toFixed(2) + 'x';
         }
 
-        /**
-         * MODIFIZIERT: Startet einen Kamera-Flug (animiert) oder Sprung (Dauer 0).
-         * @param {THREE.Object3D} targetObj - Das Zielobjekt.
-         * @param {number} duration - Dauer des Flugs in Sekunden. 0 für sofortigen Sprung.
-         */
-        function setFocus(targetObj, duration = 2.0) { // MODIFIZIERT: Dauer 1.0 -> 2.0
-            // --- NEU: Feste "Sonnensystem"-Ansicht ---
+        function setFocus(targetObj, duration = 2.0) { 
             if (targetObj === sun) {
-                cameraFocus = sun; // Setzt das Ziel, das *nach* dem Flug verfolgt wird
-                // --- MODIFIZIERT: Kameraposition angepasst ---
-                // const homePos = new THREE.Vector3(-800, 600, 800); // ALT: "links-oben" Linie
-                const homePos = new THREE.Vector3(-600, 450, 600); // NEU: Noch näher dran
-                // --- ENDE MODIFIZIERT ---
-                const homeTarget = new THREE.Vector3(0, 0, 0); // Schaut auf die Sonne (Zentrum)
-                
-                if (duration === 0) { // Sofortiger Sprung
+                cameraFocus = sun; 
+                const homePos = new THREE.Vector3(-600, 450, 600); 
+                const homeTarget = new THREE.Vector3(0, 0, 0); 
+                document.getElementById('moon-focus-container').style.display = 'none';
+                if (duration === 0) { 
                     camera.position.copy(homePos);
                     controls.target.copy(homeTarget);
                     lastCameraTargetPos.copy(homeTarget);
                     isCameraTransitioning = false; 
                     cameraFocus = sun; 
                 } else {
-                    flyTo(homePos, homeTarget, duration, sun); // Animierter Flug
+                    flyTo(homePos, homeTarget, duration, sun); 
                 }
                 controls.enableZoom = true;
-                return; // WICHTIG: Funktion hier beenden
+                return; 
             }
-            // --- ENDE NEU ---
-
-            cameraFocus = targetObj; // Setzt das Ziel, das *nach* dem Flug verfolgt wird
+            cameraFocus = targetObj; 
+            const moonContainer = document.getElementById('moon-focus-container');
+            moonContainer.style.display = 'none';
+            moonContainer.innerHTML = ''; 
+            let activePlanetIndex = -1;
+            if (targetObj === otherPlanets[3]) activePlanetIndex = 3;
+            else if (targetObj === otherPlanets[4]) activePlanetIndex = 4;
+            else {
+                const moonEntry = otherMoons.find(m => m.mesh === targetObj);
+                if (moonEntry) {
+                     if (moonEntry.parentPlanet === otherPlanets[3]) activePlanetIndex = 3;
+                     if (moonEntry.parentPlanet === otherPlanets[4]) activePlanetIndex = 4;
+                }
+            }
+            if (activePlanetIndex !== -1) {
+                moonContainer.style.display = 'flex';
+                const planetData = planetsData[activePlanetIndex];
+                const parentPlanetMesh = otherPlanets[activePlanetIndex];
+                if (planetData.moons) {
+                    planetData.moons.forEach(moonData => {
+                        const moonEntry = otherMoons.find(m => m.data.name === moonData.name && m.parentPlanet === parentPlanetMesh);
+                        if (moonEntry) {
+                            const btn = document.createElement('button');
+                            btn.className = 'btn btn-moon';
+                            btn.textContent = moonData.name;
+                            btn.addEventListener('click', () => setFocus(moonEntry.mesh));
+                            moonContainer.appendChild(btn);
+                        }
+                    });
+                }
+            }
             
             let zoomFactor;
-            const radius = targetObj.geometry.parameters.radius;
-            
-            if (targetObj === moon) {
-                zoomFactor = 10.0;
-            } else if (targetObj === sun) {
-                zoomFactor = 0.2;
-            // --- NEU: Spezifischer Zoom für Jupiter und Saturn ---
-            } else if (targetObj === otherPlanets[3]) { // Jupiter
-                zoomFactor = 1.5; // Näher heran (war dynamisch ca. 0.39)
-            } else if (targetObj === otherPlanets[4]) { // Saturn
-                zoomFactor = 2.0; // Näher heran (war dynamisch ca. 0.48). Etwas näher als Saturn kleiner ist.
-            // --- ENDE NEU ---
-            // --- NEU: Spezifischer Zoom für die Erde ---
-            } else if (targetObj === earth) {
-                // Näher ran, sodass die Mondbahn (Radius 15) den Bildschirm fast ausfüllt
-                zoomFactor = 4.2; 
-            // --- ENDE NEU ---
-            } else {
-                // Dynamischer Zoom basierend auf Planetengröße im Verhältnis zur Erde
-                zoomFactor = (EARTH_RADIUS / radius) * 2.5; 
-            }
+            const radius = targetObj.geometry ? targetObj.geometry.parameters.radius : (targetObj.radius ? targetObj.radius : 1.0); 
+            if (targetObj === moon) zoomFactor = 10.0;
+            else if (targetObj === sun) zoomFactor = 0.2;
+            else if (targetObj === otherPlanets[3]) zoomFactor = 1.5; 
+            else if (targetObj === otherPlanets[4]) zoomFactor = 2.0; 
+            else if (targetObj === earth) zoomFactor = 4.2; 
+            else if (targetObj.userData.info.name.includes('Komet')) zoomFactor = 6.0; 
+            else zoomFactor = (EARTH_RADIUS / radius) * 2.5; 
 
             const targetPos = new THREE.Vector3();
             targetObj.getWorldPosition(targetPos);
-            
             const endTarget = targetPos.clone();
-            
-            // --- MODIFIZIERT: Berechne Offset, um auf die belichtete Seite zu schauen ---
-            // Richtung vom Planeten zur Sonne (Sonne ist bei 0,0,0)
             const offsetDir = new THREE.Vector3(0, 0, 0).sub(targetPos).normalize();
-            
-            // Füge eine "Y" (oben) Komponente hinzu, um schräg draufzuschauen
-            offsetDir.y = 0.5; // (kann angepasst werden, 0.5 ist ein guter Start)
-            offsetDir.normalize(); // Erneut normalisieren, um einen korrekten Richtungsvektor zu erhalten
-            // --- ENDE MODIFIZIERT ---
-            
+            offsetDir.y = 0.5; 
+            offsetDir.normalize(); 
             const offset = offsetDir.multiplyScalar(EARTH_DISTANCE / zoomFactor);
             const endPos = targetPos.clone().add(offset);
 
-            if (duration === 0) { // Sofortiger Sprung
+            if (duration === 0) { 
                 camera.position.copy(endPos);
                 controls.target.copy(endTarget);
                 lastCameraTargetPos.copy(endTarget);
-                isCameraTransitioning = false; // Sicherstellen, dass keine Transition läuft
-                cameraFocus = targetObj; // Fokus direkt setzen
+                isCameraTransitioning = false; 
+                cameraFocus = targetObj; 
             } else {
-                flyTo(endPos, endTarget, duration, targetObj); // Animierter Flug
+                flyTo(endPos, endTarget, duration, targetObj); 
             }
-
             controls.enableZoom = true;
         }
 
@@ -1551,17 +1984,13 @@
             isDemoActive = false;
             demoType = '';
             controls.enableZoom = true;
-
             demoButtons.style.display = 'flex';
             demoControlButtons.style.display = 'none';
             demoSpeedControl.style.display = 'none';
-
-            earth.rotation.z = EARTH_TILT_RAD;
+            earthTiltPivot.rotation.z = EARTH_TILT_RAD;
             earth.rotation.x = 0; 
             moonPivot.rotation.x = MOON_TILT_RAD; 
-            
             earth.material.uniforms.uSofiDemoActive.value = false;
-            
             if (moon.material.uniforms) {
                 originalMoonMaterial.uniforms.uDemoActive.value = false; 
                 originalMoonMaterial.uniforms.uShadowBrightness.value = 0.0;
@@ -1569,303 +1998,242 @@
             }
         }
         
-        // --- MODIFIZIERT: Nutzt jetzt flyTo für spezielle Kamerapositionen ---
         function startDemo(type) {
             pauseSimulation(); 
             resetToRealMode(); 
-            
             isDemoActive = true;
             demoType = type;
             isPlaying = true; 
             playPauseBtn.textContent = 'Pause';
+            playPauseBtn.classList.add('playing'); 
             controls.enableZoom = true; 
-
             demoButtons.style.display = 'none'; 
             demoControlButtons.style.display = 'flex'; 
             demoSpeedControl.style.display = 'block'; 
             
             if (type === 'sofi') {
-                earth.rotation.z = -EARTH_TILT_RAD;
-                
+                earthTiltPivot.rotation.z = EARTH_TILT_RAD;
                 demoDurationDays = 2; 
                 currentDay = LUNAR_MONTH_DAYS * 0.0 - (demoDurationDays / 2); 
                 demoLoopStartDay = currentDay;
                 demoLoopEndDay = LUNAR_MONTH_DAYS * 0.0 + (demoDurationDays / 2); 
-                
                 earth.material.uniforms.uSofiDemoActive.value = true;
                 earthDemoRotationOffset = 3.7 * Math.PI / 4; 
                 moon.position.y = 0.3; 
-
-                // setFocus(earth); // ALT
             } else if (type === 'mofi') {
-                earth.rotation.z = 0;
-                
+                earthTiltPivot.rotation.z = EARTH_TILT_RAD;
                 demoDurationDays = 17.5 - 14.3; 
                 currentDay = 14.3; 
                 demoLoopStartDay = currentDay;
                 demoLoopEndDay = 17.5; 
-
                 moonPivot.position.y = MOON_RADIUS * 1.0; 
                 originalMoonMaterial.uniforms.uDemoActive.value = true;
-                
-                // setFocus(moon); // ALT
             }
             
-            updatePositions(currentDay); // Wichtig: Positionen setzen
+            updatePositions(currentDay); 
+            const daySlider = document.getElementById('day-slider');
             daySlider.value = currentDay;
             updateUI();
 
-            // --- NEU: Kamera-Flug (NACH updatePositions) ---
             if (type === 'sofi') {
                 const earthPos = new THREE.Vector3();
                 earth.getWorldPosition(earthPos);
-                const sunPos = new THREE.Vector3(0,0,0); // Sonne ist im Zentrum
-                
+                const sunPos = new THREE.Vector3(0,0,0); 
                 const target = earthPos.clone();
-                // Positioniere Kamera zwischen Erde und Sonne (auf der belichteten Seite)
                 const direction = sunPos.clone().sub(earthPos).normalize();
-                const endPos = earthPos.clone().add(direction.multiplyScalar(EARTH_RADIUS * 5)); // 5 Radien davor
-                
-                flyTo(endPos, target, 3.0, earth); // MODIFIZIERT: 1.5s -> 3.0s Flug, dann Erde fokussieren
-
+                const endPos = earthPos.clone().add(direction.multiplyScalar(EARTH_RADIUS * 5)); 
+                flyTo(endPos, target, 3.0, earth); 
             } else if (type === 'mofi') {
                 const moonPos = new THREE.Vector3();
                 moon.getWorldPosition(moonPos);
-                const sunPos = new THREE.Vector3(0,0,0); // Sonne ist im Zentrum
-                
+                const sunPos = new THREE.Vector3(0,0,0); 
                 const target = moonPos.clone();
-                // Positioniere Kamera "vor" den Mond (aus Sicht der Sonne)
                 const direction = sunPos.clone().sub(moonPos).normalize();
-                const endPos = moonPos.clone().add(direction.multiplyScalar(MOON_RADIUS * 12)); // 12 Radien davor
-                
-                flyTo(endPos, target, 3.0, moon); // MODIFIZIERT: 1.5s -> 3.0s Flug, dann Mond fokussieren
+                const endPos = moonPos.clone().add(direction.multiplyScalar(MOON_RADIUS * 12)); 
+                flyTo(endPos, target, 3.0, moon); 
             }
         }
 
         function endDemo() {
             resetToRealMode();
             currentDay = 0; 
+            const daySlider = document.getElementById('day-slider');
             daySlider.value = currentDay;
             moonPivot.position.y = 0; 
-            
             earthDemoRotationOffset = 0.0; 
             moon.position.y = 0; 
-            
             updatePositions(currentDay);
             updateUI();
         }
         
-        // --- MODIFIZIERT: Nutzt jetzt flyTo ---
         function jumpToPhase(index) {
             pauseSimulation(); 
             resetToRealMode(); 
-            
             earthDemoRotationOffset = 0.0; 
             moonPivot.position.y = 0; 
             moon.position.y = 0;
-            
             currentDay = PHASE_DAY_MAP[index];
-
-            moonPhaseButtons.forEach(btn => {
-                btn.classList.remove('active');
-            });
-            
+            moonPhaseButtons.forEach(btn => { btn.classList.remove('active'); });
             const clickedButton = moonPhaseButtons.find(btn => parseInt(btn.dataset.phaseIndex) === index);
-            if (clickedButton) {
-                clickedButton.classList.add('active');
-            }
-            
+            if (clickedButton) clickedButton.classList.add('active');
             updatePositions(currentDay);
+            const daySlider = document.getElementById('day-slider');
             daySlider.value = currentDay;
             updateUI();
-
-            // MODIFIZIERT: Fliege zur "Erdsicht auf Mond"-Position
             let earthPos = new THREE.Vector3();
             let moonPos = new THREE.Vector3();
             earth.getWorldPosition(earthPos);
             moon.getWorldPosition(moonPos);
-            
-            // MODIFIZIERT: Springe zur Erd-Position, schaue auf den Mond
-            // und aktiviere den 'earthView'-Modus (Kamera-Lock).
             flyTo(earthPos, moonPos, 0, 'earthView'); 
         }
 
-        // --- Animations-Loop (MODIFIZIERT: Verwaltet Kamera-Transition) ---
         function animate() {
             requestAnimationFrame(animate);
-            const deltaTime = clock.getDelta(); // NEU: Zeitdelta holen
+            const deltaTime = clock.getDelta(); 
+            
+            if (comet) {
+                if (comet.update(deltaTime)) {
+                    comet = null;
+                }
+            } else {
+                cometSpawnTimer -= deltaTime;
+                if (cometSpawnTimer <= 0) {
+                    spawnComet();
+                }
+            }
+            
+            updateUFO(deltaTime);
 
-            // 1. Kamera-Transition-Logik
             if (isCameraTransitioning) {
                 cameraTransitionProgress += deltaTime / cameraTransitionDuration;
-                
-                // Sanftes Ein- und Ausblenden (Ease-In-Out)
-                const t = cameraTransitionProgress < 0.5 
-                    ? 4 * cameraTransitionProgress * cameraTransitionProgress * cameraTransitionProgress 
-                    : 1 - Math.pow(-2 * cameraTransitionProgress + 2, 3) / 2;
-
+                const t = cameraTransitionProgress < 0.5 ? 4 * cameraTransitionProgress * cameraTransitionProgress * cameraTransitionProgress : 1 - Math.pow(-2 * cameraTransitionProgress + 2, 3) / 2;
                 if (cameraTransitionProgress >= 1.0) {
-                    // Übergang beendet
                     isCameraTransitioning = false;
                     camera.position.copy(cameraTransitionEndPos);
                     controls.target.copy(cameraTransitionEndTarget);
-                    cameraFocus = cameraFocusAfterTransition; // Fokus wiederherstellen
+                    cameraFocus = cameraFocusAfterTransition; 
                     lastCameraTargetPos.copy(controls.target);
                 } else {
-                    // Während des Übergangs: Position und Ziel interpolieren
                     camera.position.lerpVectors(cameraTransitionStartPos, cameraTransitionEndPos, t);
                     controls.target.lerpVectors(cameraTransitionStartTarget, cameraTransitionEndTarget, t);
                 }
             }
-
-            // 2. Simulations-Logik (läuft auch während des Kameraflugs)
             let actualSpeed = speed;
-            if (isDemoActive) {
-                actualSpeed = demoLoopSpeed;
-            }
-
+            if (isDemoActive) actualSpeed = demoLoopSpeed;
             if (isPlaying) {
-                // Originale, Framerate-abhängige Zeitlogik
                 const deltaDays = (actualSpeed * (1 / 60)) * (isDemoActive ? 1 : EARTH_YEAR_DAYS / 60); 
                 currentDay += deltaDays;
-                
                 if (isDemoActive) {
-                    if (currentDay > demoLoopEndDay) {
-                        currentDay = demoLoopStartDay; 
-                    } else if (currentDay < demoLoopStartDay) { 
-                        currentDay = demoLoopEndDay;
-                    }
+                    if (currentDay > demoLoopEndDay) currentDay = demoLoopStartDay; 
+                    else if (currentDay < demoLoopStartDay) currentDay = demoLoopEndDay;
                 }
-                
+                const daySlider = document.getElementById('day-slider');
                 daySlider.value = currentDay % EARTH_YEAR_DAYS;
                 updateUI();
             }
-
-            // 3. Updates (laufen immer)
             updatePositions(currentDay);
-            updateCamera(false); // updateCamera wird jetzt nur aktiv, wenn *nicht* getransitiont wird
-            
+            updateCamera(false); 
             controls.update();
             renderer.render(scene, camera);
         }
 
-        // --- Update-Funktionen ---
-        function updatePositions(day) {
-            // 1. Umlaufbahn der Erde (um die Sonne)
-            const earthOrbitAngle = (day / EARTH_YEAR_DAYS) * Math.PI * 2;
-            earthPivot.rotation.y = earthOrbitAngle;
+        function calculateEllipticalPosition(a, e, perihelionAngle, days, yearDays) {
+            const M = (days / yearDays) * Math.PI * 2;
+            let nu = M + 2 * e * Math.sin(M) + 1.25 * e * e * Math.sin(2 * M);
+            const r = a * (1 - e * e) / (1 + e * Math.cos(nu));
+            const x_orb = r * Math.cos(nu);
+            const z_orb = r * Math.sin(nu);
+            const x_final = x_orb * Math.cos(perihelionAngle) - z_orb * Math.sin(perihelionAngle);
+            const z_final = x_orb * Math.sin(perihelionAngle) + z_orb * Math.cos(perihelionAngle);
+            return { x: x_final, z: -z_final }; 
+        }
 
-            // 2. Eigendrehung der Erde (1x pro Tag)
+        function updatePositions(day) {
+            const earthOrbitAngle = (day / EARTH_YEAR_DAYS) * Math.PI * 2;
+            earthTiltPivot.position.set(Math.cos(earthOrbitAngle) * EARTH_DISTANCE, 0, -Math.sin(earthOrbitAngle) * EARTH_DISTANCE);
+
             let rotationFactor = 1.0;
-            
-            if (isDemoActive && demoType === 'sofi') {
-                rotationFactor = 0.1; 
-            }
-            
+            if (isDemoActive && demoType === 'sofi') rotationFactor = 0.1; 
             earth.rotation.y = (day * rotationFactor) * Math.PI * 2; 
             earth.rotation.y += earthDemoRotationOffset; 
 
-            // 3. Umlaufbahn des Mondes (um die Erde)
             let moonOrbitAngle;
-            if (isDemoActive) {
-                moonOrbitAngle = (day / LUNAR_MONTH_DAYS) * Math.PI * 2;
-            } else {
-                moonOrbitAngle = ((day - PHASE_OFFSET_DAYS) / LUNAR_MONTH_DAYS) * Math.PI * 2;
-            }
+            if (isDemoActive) moonOrbitAngle = (day / LUNAR_MONTH_DAYS) * Math.PI * 2;
+            else moonOrbitAngle = ((day - PHASE_OFFSET_DAYS) / LUNAR_MONTH_DAYS) * Math.PI * 2;
             
-            let earthPos = new THREE.Vector3();
-            earth.getWorldPosition(earthPos);
+            let earthWorldPos = new THREE.Vector3();
+            earth.getWorldPosition(earthWorldPos);
             
-            moonPivot.position.copy(earthPos);
+            moonPivot.position.copy(earthWorldPos);
             moonPivot.rotation.y = moonOrbitAngle; 
-            moonOrbitLine.position.copy(earthPos);
-            
-            // 4. Eigendrehung des Mondes (Gebundene Rotation)
+            moonOrbitLine.position.copy(earthWorldPos);
             moon.rotation.y = 0;
 
-            // 5. Positionen der anderen Planeten aktualisieren
-            otherPlanetPivots.forEach((pivot, index) => {
+            otherPlanetControls.forEach((ctrl, index) => {
                 const data = planetsData[index];
                 const planet = otherPlanets[index];
-                
-                const orbitAngle = (day / data.yearDays) * Math.PI * 2;
-                pivot.rotation.y = orbitAngle;
-                
-                // planet.rotation.y = (day * 1.0) * Math.PI * 2; 
-
-                // --- MODIFIZIERT: Realistische Rotationsgeschwindigkeit ---
-                // Nutzt den neuen 'rotationSpeed'-Wert aus definePlanetData()
-                // (relativ zur Erde = 1.0)
+                const pos = calculateEllipticalPosition(data.distance, data.ecc, data.perihelionAngle, day, data.yearDays);
+                ctrl.container.position.set(pos.x, 0, pos.z);
                 planet.rotation.y = (day * data.rotationSpeed) * Math.PI * 2;
-                // --- ENDE MODIFIZIERT ---
-
                 let tempVec = new THREE.Vector3();
                 planet.getWorldPosition(tempVec);
                 planet.material.uniforms.uObjectWorldPosition.value.copy(tempVec);
                 
-                if (data.name === 'Saturn' && saturnRingMaterial) {
-                    saturnRingMaterial.uniforms.uSaturnPosition.value.copy(tempVec);
+                if (data.name === 'Saturn') {
+                     if (saturnRingMaterial) saturnRingMaterial.uniforms.uSaturnPosition.value.copy(tempVec);
+                     
+                     if (saturnPlanetMaterial) {
+                        const ringNormalWorld = new THREE.Vector3(0, 1, 0).applyQuaternion(ctrl.tiltPivot.getWorldQuaternion(new THREE.Quaternion()));
+                        saturnPlanetMaterial.uniforms.uRingNormal.value.copy(ringNormalWorld);
+                     }
                 }
             });
 
-            // 6. Shader-Uniforms aktualisieren (war 5.)
+            let tempParentPos = new THREE.Vector3();
+            otherMoons.forEach(moonObj => {
+                moonObj.pivot.rotation.y = (day * moonObj.speed) * Math.PI * 2;
+                let tempVec = new THREE.Vector3();
+                moonObj.mesh.getWorldPosition(tempVec);
+                moonObj.mesh.material.uniforms.uObjectWorldPosition.value.copy(tempVec);
+                moonObj.parentPlanet.getWorldPosition(tempParentPos);
+                moonObj.mesh.material.uniforms.uParentPosition.value.copy(tempParentPos);
+            });
+
             let tempVec = new THREE.Vector3();
             earth.getWorldPosition(tempVec);
             earth.material.uniforms.uObjectWorldPosition.value.copy(tempVec);
-            
             let moonWorldPosition = new THREE.Vector3();
             moon.getWorldPosition(moonWorldPosition);
             earth.material.uniforms.uMoonPosition.value.copy(moonWorldPosition);
 
-            // MoFi-Demo Logik
             if (isDemoActive && demoType === 'mofi') {
                 const animProgress = (currentDay - demoLoopStartDay) / (demoLoopEndDay - demoLoopStartDay);
-                
                 const dayToProgress = (d) => (d - demoLoopStartDay) / (demoLoopEndDay - demoLoopStartDay);
-
-                const peakDay = 15.7; 
-                const peakProgress = dayToProgress(peakDay); 
-
-                const redFadeInStart = peakProgress - 0.05; 
-                const redFadeOutStart = dayToProgress(16.4); 
-                const redFadeOutEnd = dayToProgress(16.5);   
-                
-                const shadowFadeInStart = peakProgress - 0.05; 
-                const shadowFadeInEnd = peakProgress;         
-
-                const shadowFadeOutStart = dayToProgress(16.2);
-                const shadowFadeOutEnd = dayToProgress(16.5);
-                
+                const peakDay = 15.7; const peakProgress = dayToProgress(peakDay); 
+                const redFadeInStart = peakProgress - 0.05; const redFadeOutStart = dayToProgress(16.4); const redFadeOutEnd = dayToProgress(16.5);   
+                const shadowFadeInStart = peakProgress - 0.05; const shadowFadeInEnd = peakProgress;         
+                const shadowFadeOutStart = dayToProgress(16.2); const shadowFadeOutEnd = dayToProgress(16.5);
                 const shadowTargetBrightness = 0.6; 
-
-                let redIntensity = 0.0;
-                let shadowBrightness = 0.0; 
-
+                let redIntensity = 0.0; let shadowBrightness = 0.0; 
                 if (animProgress <= peakProgress) {
                     const fadeProgress = Math.max(0.0, (animProgress - redFadeInStart) / (peakProgress - redFadeInStart));
                     redIntensity = (fadeProgress * fadeProgress); 
-                }
-                else if (animProgress > peakProgress && animProgress <= redFadeOutEnd) {
+                } else if (animProgress > peakProgress && animProgress <= redFadeOutEnd) {
                     const fadeProgress = (animProgress - peakProgress) / (redFadeOutEnd - peakProgress);
                     redIntensity = 1.0 - (fadeProgress * fadeProgress); 
                 }
-
                 if (animProgress > shadowFadeInStart && animProgress <= shadowFadeInEnd) {
                     const fadeProgress = (animProgress - shadowFadeInStart) / (shadowFadeInEnd - shadowFadeInStart);
-                    shadowBrightness = (fadeProgress * fadeProgress) * shadowTargetBrightness;
-                }
-                else if (animProgress > shadowFadeInEnd && animProgress <= shadowFadeOutStart) {
+                    shadowBrightness = fadeProgress * shadowTargetBrightness;
+                } else if (animProgress > shadowFadeInEnd && animProgress <= shadowFadeOutStart) {
                      shadowBrightness = shadowTargetBrightness;
-                }
-                else if (animProgress > shadowFadeOutStart && animProgress <= shadowFadeOutEnd) {
+                } else if (animProgress > shadowFadeOutStart && animProgress <= shadowFadeOutEnd) {
                     const fadeProgress = (animProgress - shadowFadeOutStart) / (shadowFadeOutEnd - shadowFadeOutStart);
                     shadowBrightness = shadowTargetBrightness - ((fadeProgress * fadeProgress) * shadowTargetBrightness);
                 }
-                
                 originalMoonMaterial.uniforms.uShadowBrightness.value = shadowBrightness;
                 originalMoonMaterial.uniforms.uRedOverlayIntensity.value = redIntensity;
             }
-            
             moon.getWorldPosition(tempVec);
             if (moon.material.uniforms) {
                 originalMoonMaterial.uniforms.uObjectWorldPosition.value.copy(tempVec);
@@ -1874,149 +2242,109 @@
             }
         }
 
-        // --- MODIFIZIERT: Führt nur noch das "Folgen" aus, kein Springen/Fliegen ---
         function updateCamera(isJump = false) {
-            // Wenn wir fliegen oder springen (isJump=true, wird von init nicht mehr genutzt), 
-            // wird die Kamera an anderer Stelle gesteuert.
-            if (isCameraTransitioning || isJump) {
-                return;
-            }
+            if (isCameraTransitioning || isJump) return;
             
-            // Wenn der Fokus ein String-Name für eine Logik ist (z.B. 'transitioning' oder 'earthView')
+            let targetObject;
+
             if (typeof cameraFocus === 'string') {
                 if (cameraFocus === 'earthView') {
-                    // NEUE LOGIK:
-                    // Die Kamera bleibt auf der Erde (Position) und schaut 
-                    // zum Mond (Target). ABER: Wenn der Benutzer die 
-                    // Kamera selbst bewegt, wird dieser Lock aufgehoben.
-                    
                     if (isUserControllingCamera) {
-                        // 1. Der Benutzer hat die Steuerung übernommen.
-                        // Wir wechseln den Fokus zum MOND.
                         cameraFocus = moon; 
-                        
-                        // 2. WICHTIG: Wir setzen 'lastCameraTargetPos' sofort auf den MOND,
-                        //    damit kein Sprung im nächsten Frame entsteht.
                         moon.getWorldPosition(lastCameraTargetPos);
-                        
-                        // 3. WICHTIG: Wir kehren sofort zurück, damit wir in DIESEM Frame
-                        //    nicht noch die Standard-Logik ausführen, die evtl. mit
-                        //    der manuellen Steuerung kollidiert.
                         return; 
-
                     } else {
-                        // 4. Der Benutzer steuert nicht. Wir wenden den Lock an.
-                        //    (Das ist die "von Erde auf Mond schauen"-Logik)
                         let earthPos = new THREE.Vector3();
                         let moonPos = new THREE.Vector3();
                         earth.getWorldPosition(earthPos);
                         moon.getWorldPosition(moonPos);
-                        
-                        // Halte die Kameraposition = Erdposition
                         camera.position.copy(earthPos); 
-                        // Halte das Target = Mondposition
                         controls.target.copy(moonPos);
                         lastCameraTargetPos.copy(moonPos);
-                        return; // Wichtig: updateCamera hier beenden
+                        return; 
                     }
                 }
-                
+                if (cameraFocus === 'ufo_to_earth') {
+                    let ufoPos = new THREE.Vector3();
+                    let earthPos = new THREE.Vector3();
+                    ufo.getWorldPosition(ufoPos);
+                    earth.getWorldPosition(earthPos);
+                    controls.target.copy(earthPos); 
+                    const behindDir = new THREE.Vector3().subVectors(ufoPos, earthPos).normalize();
+                    const camPos = ufoPos.clone().add(behindDir.multiplyScalar(30 * SCENE_SCALE));
+                    camPos.y += 15 * SCENE_SCALE; 
+                    camera.position.lerp(camPos, 0.05); 
+                    return;
+                }
+                if (cameraFocus === 'ufo_leaving_watch') {
+                    ufo.getWorldPosition(controls.target);
+                    return;
+                }
                 if (cameraFocus === 'ecliptic_side_view') {
-                    // Logik für Ekliptik-Sicht (folgt der Erde von der Seite)
                     let earthPos = new THREE.Vector3();
                     earth.getWorldPosition(earthPos);
-                    
                     let offset = earthPos.clone().normalize().multiplyScalar(40);
                     let sideOffset = new THREE.Vector3(-earthPos.z, 0, earthPos.x).normalize().multiplyScalar(4); 
-                    
                     const endPos = earthPos.clone().add(offset).add(sideOffset);
-                    endPos.y = 0; // Auf die Ekliptik-Ebene
-                    
+                    endPos.y = 0; 
                     camera.position.copy(endPos);
                     controls.target.set(0, 0, 0);
                     lastCameraTargetPos.copy(controls.target);
                     return;
                 }
-                
-                // Wenn 'transitioning' oder unbekannter String, tu nichts (oder setze Standard)
                 if (cameraFocus === 'transitioning') return;
-                
-                // Fallback, falls Fokus-String unbekannt ist
-                setFocus(sun, 0); // Springe zur Sonne
+                setFocus(sun, 0); 
                 return;
             }
             
-            // Wenn der Fokus ein Objekt ist (Standard-Folgen-Logik)
-            let targetObj = cameraFocus; 
-            
-            if (!targetObj) {
-                targetObj = sun;
-                cameraFocus = sun;
-            }
+            targetObject = cameraFocus; 
+            if (!targetObject) { targetObject = sun; cameraFocus = sun; }
             
             let currentTargetPos = new THREE.Vector3();
-            targetObj.getWorldPosition(currentTargetPos);
-
-            // Dies ist die "Folgen"-Logik
+            targetObject.getWorldPosition(currentTargetPos);
+            
             if (isPlaying || isDemoActive) {
                 const delta = currentTargetPos.clone().sub(lastCameraTargetPos);
                 camera.position.add(delta);
                 controls.target.add(delta);
             }
-            
             lastCameraTargetPos.copy(currentTargetPos);
         }
         
         function updateUI() {
-            dayLabel.textContent = Math.floor(currentDay % EARTH_YEAR_DAYS);
-            
             let sunPos = new THREE.Vector3();
             let earthPos = new THREE.Vector3();
             let moonPos = new THREE.Vector3();
-            
             sun.getWorldPosition(sunPos);
-            // KORREKTUR: Das 'f' wurde hier entfernt
             earth.getWorldPosition(earthPos);
             moon.getWorldPosition(moonPos);
-
             const vecEarthToMoon = new THREE.Vector3().subVectors(moonPos, earthPos);
             const vecEarthToSun = new THREE.Vector3().subVectors(sunPos, earthPos); 
-            
             let angle = Math.atan2(vecEarthToSun.z, vecEarthToSun.x) - Math.atan2(vecEarthToMoon.z, vecEarthToMoon.x);
             angle = (angle + Math.PI * 2) % (Math.PI * 2);
-            
-            let phaseIndex = 0;
-            let normalizedAngle = angle;
-            
-            phaseIndex = Math.floor(normalizedAngle / (Math.PI * 2) * 8 + 0.5) % 8;
-            
+            let phaseIndex = Math.floor(normalizedAngle = angle / (Math.PI * 2) * 8 + 0.5) % 8;
             const phaseNames = ["Neumond", "Zun. Sichel", "Zun. Halbmond", "Zun. Drittel", "Vollmond", "Abn. Drittel", "Abn. Halbmond", "Abn. Sichel"];
             let phaseName = phaseNames[phaseIndex];
-
-            let infoText = `Tag: ${Math.floor(currentDay % EARTH_YEAR_DAYS)} | ${phaseName}`;
             
-            // Finsternis-Logik (Prüfung)
+            let infoText = `Mondphase: ${phaseName}`;
+            
             if (isDemoActive) {
-                if (demoType === 'sofi') {
-                    infoText = "SONNENFINSTERNIS (Demo)";
-                } else if (demoType === 'mofi') {
-                    infoText = "MONDFINSTERNIS (Demo)";
-                }
+                if (demoType === 'sofi') infoText = "SONNENFINSTERNIS (Demo)";
+                else if (demoType === 'mofi') infoText = "MONDFINSTERNIS (Demo)";
             } else {
                 let moonWorldY = moon.getWorldPosition(new THREE.Vector3()).y;
                 let earthWorldY = earth.getWorldPosition(new THREE.Vector3()).y; 
-                
                 let yDiff = Math.abs(moonWorldY - earthWorldY);
-                
                 const ECLIPSE_TOLERANCE = (MOON_RADIUS + EARTH_RADIUS) / 3; 
-
-                if (phaseIndex === 0 && yDiff < ECLIPSE_TOLERANCE) { 
-                    infoText += " (Mögliche SoFi)";
-                }
-                if (phaseIndex === 4 && yDiff < ECLIPSE_TOLERANCE) { 
-                     infoText += " (Mögliche MoFi)";
-                }
+                if (phaseIndex === 0 && yDiff < ECLIPSE_TOLERANCE) infoText += " (Mögliche SoFi)";
+                if (phaseIndex === 4 && yDiff < ECLIPSE_TOLERANCE) infoText += " (Mögliche MoFi)";
             }
+            
+            if (comet) {
+                 const cometDist = comet.group.position.length().toFixed(0);
+                 infoText += ` | Komet: ${cometDist} Einh.`;
+            }
+
             infoBox.textContent = infoText;
         }
 
@@ -2026,182 +2354,132 @@
             renderer.setSize(window.innerWidth, window.innerHeight);
         }
 
-        // --- NEUE/MODIFIZIERTE FUNKTIONEN FÜR INFO-POPUP ---
-
-        /**
-         * NEU: Start des Touch-Events. Speichert die Startposition.
-         */
         function onTouchStart(event) {
-            // Nur den ersten Finger berücksichtigen
             if (event.touches.length === 1) {
                 touchStartX = event.touches[0].clientX;
                 touchStartY = event.touches[0].clientY;
-                isDragging = false; // Zurücksetzen bei jedem neuen Touch
+                isDragging = false; 
             }
         }
-        
-        /**
-         * NEU: Bewegung des Touch-Events. Prüft, ob es ein "Drag" ist.
-         */
         function onTouchMove(event) {
-            if (isDragging || event.touches.length !== 1) {
-                return; // Entweder schon als Drag markiert or Multi-Touch
-            }
-            
+            if (isDragging || event.touches.length !== 1) return; 
             const deltaX = Math.abs(event.touches[0].clientX - touchStartX);
             const deltaY = Math.abs(event.touches[0].clientY - touchStartY);
-            
-            // Wenn der Finger sich mehr als den Schwellenwert bewegt, ist es ein Drag
-            if (deltaX > dragThreshold || deltaY > dragThreshold) {
-                isDragging = true;
-            }
+            if (deltaX > dragThreshold || deltaY > dragThreshold) isDragging = true;
         }
-        
-        /**
-         * NEU: Ende des Touch-Events (Tap-Logik)
-         */
         function onTouchEnd(event) {
-            // event.target ist beim 'touchend' das Element, auf dem der Touch *gestartet* wurde
             const targetElement = event.target;
-            
-            // Wenn 'isDragging' true ist, war es eine Wischgeste (Kamerasteuerung), kein Tap.
-            if (isDragging) {
-                isDragging = false; // Reset
-                return;
-            }
-            
-            // Es war ein Tap. Holen der Koordinaten.
-            // Wichtig: 'changedTouches' verwenden, da 'touches' bei 'touchend' leer ist.
+            if (isDragging) { isDragging = false; return; }
             const touch = event.changedTouches[0];
             if (!touch) return; 
-            
-            // Führe die Klick/Tap-Logik aus
             const popupOpened = handleInteraction(touch.clientX, touch.clientY, targetElement);
-            
-            // "Ghost Click" verhindern: Wenn das Popup geöffnet wurde,
-            // verhindern wir das 300ms verzögerte 'click'-Event.
-            if (popupOpened) {
-                event.preventDefault();
-            }
+            if (popupOpened) event.preventDefault();
         }
-
-        /**
-         * NEU: Klick-Event (nur für Maus)
-         */
         function onMouseClick(event) {
-            // Führe die Klick/Tap-Logik aus
             handleInteraction(event.clientX, event.clientY, event.target);
         }
-
-        /**
-         * NEU: Zentrale Logik für Klick/Tap-Verarbeitung (Raycasting)
-         * Prüft UI-Kollision und führt Raycasting aus.
-         * Gibt true zurück, wenn das Popup geöffnet wurde.
-         */
         function handleInteraction(x, y, targetElement) {
-            // Verhindern, dass Klicks auf die UI (oder das Popup selbst) die Szene durchdringen
             const uiContainer = document.getElementById('ui-container');
             const popup = document.getElementById('info-popup');
+            const ufoDialog = document.getElementById('ufo-dialog');
+            if (uiContainer.contains(targetElement) || popup.contains(targetElement) || ufoDialog.contains(targetElement) || infoToastButton.contains(targetElement)) return false; 
             
-            // Prüfen, ob das Ziel-Element (wo geklickt/getippt wurde) Teil der UI oder des Popups ist
-            if (uiContainer.contains(targetElement) || popup.contains(targetElement)) {
-                return false; // Interaktion war auf der UI, nicht in der Szene
-            }
-
-            // Maus-/Touch-Position normalisieren (von -1 bis +1)
             mouse.x = (x / window.innerWidth) * 2 - 1;
             mouse.y = -(y / window.innerHeight) * 2 + 1;
-
-            // Raycaster von der Kamera durch die Mausposition aktualisieren
             raycaster.setFromCamera(mouse, camera);
-
-            // Schnittpunkte mit den klickbaren Objekten berechnen
-            const intersects = raycaster.intersectObjects(clickableObjects);
+            const intersects = raycaster.intersectObjects(clickableObjects, true); 
 
             if (intersects.length > 0) {
-                // Das erste getroffene Objekt nehmen
-                const clickedObject = intersects[0].object;
-                
-                // Prüfen, ob das Objekt Info-Daten hat
-                if (clickedObject.userData.info) {
-                    showInfoPopup(clickedObject.userData.info);
-                    return true; // Popup wurde geöffnet
+                let clickedObject = intersects[0].object;
+                while (clickedObject.parent && !clickableObjects.includes(clickedObject)) {
+                    clickedObject = clickedObject.parent;
                 }
+
+                if (clickedObject.userData.isUFO && ufoState === 'hovering') { 
+                    ufoState = 'interacted';
+                    document.getElementById('ufo-dialog').style.display = 'block';
+                    if (isPlaying) pauseSimulation();
+                    return true;
+                }
+
+                if (clickedObject.userData.info) {
+                    currentSelectedInfo = clickedObject.userData.info;
+                    infoToastButton.textContent = `💡 Info: ${currentSelectedInfo.name}`;
+                    infoToastButton.style.display = 'block';
+                    return true; 
+                }
+            } else {
+                infoToastButton.style.display = 'none';
+                currentSelectedInfo = null;
             }
-            return false; // Nichts getroffen oder kein Info-Objekt
+            return false; 
         }
-
-
-        /**
-         * Zeigt das Info-Popup mit den Daten des übergebenen Objekts an.
-         * @param {object} info - Das info-Objekt aus userData.
-         */
-        // --- MODIFIZIERT: showInfoPopup für neue dynamische Datenstruktur ---
         function showInfoPopup(info) {
             const popup = document.getElementById('info-popup');
             const titleEl = document.getElementById('popup-title');
             const detailsEl = document.getElementById('popup-details');
-
             titleEl.textContent = info.name;
+            
+            // --- Vereinfachte Darstellung für Kometen ---
+            if (info.type === 'comet') {
+                let detailsHTML = '';
+                // Zeige zuerst Radius und Geschwindigkeit
+                if (info.radius_km) detailsHTML += `<p><strong>Größe:</strong> <span>${info.radius_km}</span></p>`;
+                if (info.velocity) detailsHTML += `<p><strong>Geschwindigkeit:</strong> <span>${info.velocity}</span></p>`;
 
-            // Mapping von internen Schlüsseln zu angezeigten Labels
+                if (info.funFacts && info.funFacts.length > 0) {
+                    info.funFacts.forEach((fact, index) => {
+                        // Erster Fakt bekommt einen Abstand nach oben
+                        const style = (index === 0) ? 'margin-top: 15px; padding-top: 10px; border-top: 1px dashed #444;' : '';
+                        detailsHTML += `<p class="fun-fact" style="${style}">${fact}</p>`;
+                    });
+                }
+                detailsEl.innerHTML = detailsHTML;
+                popup.style.display = 'flex';
+                return;
+            }
+            // ------------------------------------------------
+
             const factMap = {
-                oberflaeche_temp: 'Oberflächentemp.',
-                kerntemperatur: 'Kerntemperatur',
-                zusammensetzung: 'Zusammensetzung',
-                alter: 'Alter',
-                distance_Mio_km: 'Abstand (Sonne)', // Standard
-                lightTime: 'Lichtlaufzeit',
+                earthCompareRadius: 'Größe',
+                radius_km: 'Radius', 
+                distance_Mio_km: 'Abstand', 
+                umlaufzeit: 'Umlaufzeit (Sonne)', 
                 taglaenge: 'Tageslänge',
-                temperatur: 'Temperatur',
-                atmosphaere: 'Atmosphäre (Haupt.)',
-                schwerkraft: 'Schwerkraft (Vergl. Erde)',
-                ringe: 'Ringe (Zus.)',
-                achsneigung: 'Achsenneigung',
-                wind: 'Windgeschwindigkeit',
-                umlaufzeit: 'Umlaufzeit'
+                temperatur: 'Durchschnittstemp.', 
+                oberflaeche_temp: 'Oberflächentemp.',
+                zusammensetzung: 'Zusammensetzung'
             };
 
-            // Spezielle Labels für Erde und Mond
-            if (info.distanceType) {
-                factMap['distance_Mio_km'] = info.distanceType; // z.B. "Abstand zur Erde"
-            }
-            if (info.name === 'Erde') {
-                 factMap['temperatur'] = 'Durchschnittstemp.';
+            if (info.name === 'Sonne') {
+                 factMap['earthCompareRadius'] = 'Größe (Vergleich)';
+            } else if (info.name.includes('Mond')) { 
+                 factMap['distance_Mio_km'] = `Abstand zu/r ${info.parentName}`; 
+                 factMap['umlaufzeit'] = `Umlaufzeit (${info.parentName})`; 
             }
 
-            let detailsHTML = `
-                <p><strong>Radius:</strong> <span>${info.radius_km} km</span></p>
-                <p><strong>Größe:</strong> <span>${info.earthCompareRadius}</span></p>
-            `;
+            let detailsHTML = ``;
+            
+            const orderedKeys = ['earthCompareRadius', 'radius_km', 'distance_Mio_km', 'umlaufzeit', 'taglaenge', 'temperatur', 'oberflaeche_temp', 'zusammensetzung'];
+            
+            orderedKeys.forEach(key => {
+                if (info.name === 'Sonne' && key === 'umlaufzeit') return;
 
-            // Dynamisch alle "Hardfacts" hinzufügen, die im Mapping definiert sind
-            for (const key in info) {
-                if (factMap[key] && info[key]) {
+                if (info[key] && factMap[key]) {
                     detailsHTML += `<p><strong>${factMap[key]}:</strong> <span>${info[key]}</span></p>`;
                 }
-            }
-            
-            // Fun Facts hinzufügen (jetzt ein Array)
+            });
+
             if (info.funFacts && info.funFacts.length > 0) {
                 info.funFacts.forEach((fact, index) => {
-                    // Füge eine Trennlinie vor dem ersten Fakt hinzu
                     const style = (index === 0) ? 'margin-top: 15px; padding-top: 10px; border-top: 1px dashed #444;' : '';
                     detailsHTML += `<p class="fun-fact" style="${style}">${fact}</p>`;
                 });
             }
-
             detailsEl.innerHTML = detailsHTML;
-            
-            // Popup anzeigen
             popup.style.display = 'flex';
         }
-        // --- ENDE MODIFIKATION ---
 
-        // --- ENDE NEUE FUNKTIONEN ---
-
-
-        // --- Start ---
         init();
     </script>
 </body>
