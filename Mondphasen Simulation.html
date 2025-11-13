@@ -524,12 +524,12 @@
         <div class="control-group" id="controls-general">
             <h3>Steuerung</h3>
             <div class="btn-group" style="margin-bottom: 15px;" id="play-group">
-                <button id="rewind-btn" class="btn btn-secondary" title="Zurückspulen">⏮</button>
+                <button id="rewind-btn" class="btn btn-secondary" title="Zurückspulen">⏪</button>
                 <button id="play-pause-btn" class="btn">Pause</button>
             </div>
             
             <div id="time-controls">
-                <label for="day-slider">Zeitsteuerung (1. Jahr): <span id="current-day-label" style="font-weight: bold; color: #ffc107;">0.0</span></label>
+                <label for="day-slider">Zeitsteuerung (Manuell)</label>
                 <input type="range" id="day-slider" min="0" max="365" value="0" step="0.1">
                 
                 <label for="speed-slider" style="margin-top: 10px;">Geschwindigkeit: <span id="speed-label"></span></label>
@@ -716,7 +716,6 @@
         let rulerFadeTimer = 0;
         
         let distanceLabelEl = null;
-        let currentDayLabelEl = null;
 
         let targetSunScale = 1.0;
         let targetEarthDistance; 
@@ -1418,35 +1417,9 @@
             }
         }
         // --- Ende NEU ---
-        
-        function formatDayCount(day) {
-            // Die Konstante EARTH_YEAR_DAYS (365.25) ist bereits global definiert
-            
-            const sign = day < 0 ? "-" : "";
-            const absDay = Math.abs(day);
-            
-            const years = Math.trunc(absDay / EARTH_YEAR_DAYS);
-            const remainingDays = absDay % EARTH_YEAR_DAYS;
-            
-            // Runden auf eine Nachkommastelle
-            const daysFixed = remainingDays.toFixed(1);
-            
-            // Plural-Regeln (vereinfacht)
-            const dayPlural = (parseFloat(daysFixed) === 1.0) ? "Tag" : "Tage";
-
-            if (years === 0) {
-                // Format: "-10.5 Tage"
-                return `${sign}${daysFixed} ${dayPlural}`;
-            } else {
-                // Format: "-1 Jahr 0.8 Tage"
-                const yearPlural = (years === 1) ? "Jahr" : "Jahre";
-                return `${sign}${years} ${yearPlural} ${daysFixed} ${dayPlural}`;
-            }
-        }
 
         function init() {
             distanceLabelEl = document.getElementById('distance-label');
-            currentDayLabelEl = document.getElementById('current-day-label');
 
             infoToastButton = document.getElementById('info-toast-button');
             followCometBtn = document.getElementById('follow-comet-btn'); 
@@ -2045,7 +2018,6 @@
             daySlider.addEventListener('input', () => {
                 pauseSimulation();
                 currentDay = parseFloat(daySlider.value);
-                if (currentDayLabelEl) currentDayLabelEl.textContent = formatDayCount(currentDay);
                 updatePositions(currentDay);
                 updateUI();
             });
@@ -2475,7 +2447,7 @@
         // *** ÄNDERUNG 2: Handler-Funktionen für Zurückspulen ***
         function startRewind(e) {
             e.preventDefault();
-            if (isDemoActive || isRealScaleActive) {
+            if (isDemoActive || isFrequencyDemoActive || isRealScaleActive) {
                 return; // Nicht während Demos oder Real-Scale zurückspulen
             }
             
@@ -2733,7 +2705,6 @@
 
             // Zeit zurücksetzen
             currentDay = 0;
-            if (currentDayLabelEl) currentDayLabelEl.textContent = formatDayCount(currentDay);
             updatePositions(currentDay);
             document.getElementById('day-slider').value = currentDay;
             updateUI();
@@ -2849,9 +2820,7 @@
                 moonPivot.position.y = MOON_RADIUS * 1.0; 
                 originalMoonMaterial.uniforms.uDemoActive.value = true;
             }
-
-            if (currentDayLabelEl) currentDayLabelEl.textContent = formatDayCount(currentDay);
-
+            
             updatePositions(currentDay); 
             const daySlider = document.getElementById('day-slider');
             daySlider.value = currentDay;
@@ -2885,7 +2854,6 @@
             toggleOtherPlanets(true);  // Stellt Planeten gem. Checkbox wieder her
             restoreOrbitLines();       // Stellt Erd/Mond-Bahnen gem. Checkbox wieder her
             currentDay = 0; 
-            if (currentDayLabelEl) currentDayLabelEl.textContent = formatDayCount(currentDay);
             const daySlider = document.getElementById('day-slider');
             daySlider.value = currentDay;
             moonPivot.position.y = 0; 
@@ -3249,7 +3217,6 @@
             moonPivot.position.y = 0; 
             moon.position.y = 0;
             currentDay = PHASE_DAY_MAP[index];
-            if (currentDayLabelEl) currentDayLabelEl.textContent = formatDayCount(currentDay);
             
             // moonPhaseButtons.forEach(btn => { btn.classList.remove('active'); }); // Wird jetzt von resetActiveIndicators() erledigt
             const clickedButton = moonPhaseButtons.find(btn => parseInt(btn.dataset.phaseIndex) === index);
@@ -3324,7 +3291,6 @@ function jumpToSeason(day, clickedBtn) {
 
     // 4. Tag setzen
     currentDay = day;
-    if (currentDayLabelEl) currentDayLabelEl.textContent = formatDayCount(currentDay);
     const daySlider = document.getElementById('day-slider');
     daySlider.value = currentDay;
 
@@ -3530,11 +3496,12 @@ function jumpToSeason(day, clickedBtn) {
                 const deltaDays = actualSpeed * daysPerSecondFactor * deltaTime;
                 currentDay -= deltaDays;
                 
-                
+                if (currentDay < 0) {
+                     currentDay += EARTH_YEAR_DAYS; // Umbruch am Anfang
+                }
 
                 const daySlider = document.getElementById('day-slider');
-                daySlider.value = ((currentDay % EARTH_YEAR_DAYS) + EARTH_YEAR_DAYS) % EARTH_YEAR_DAYS;
-                if (currentDayLabelEl) currentDayLabelEl.textContent = formatDayCount(currentDay);
+                daySlider.value = currentDay;
                 updateUI();
                 
             } else if (isPlaying) {
@@ -3553,14 +3520,12 @@ function jumpToSeason(day, clickedBtn) {
                     else if (currentDay < demoLoopStartDay) currentDay = demoLoopEndDay;
                 }
                 // --- NEU: Frequenz-Demo läuft einfach weiter ---
-                // --- NEU: Frequenz-Demo läuft einfach weiter ---
                 else if (isFrequencyDemoActive) {
-                    // if (currentDay > EARTH_YEAR_DAYS) currentDay -= EARTH_YEAR_DAYS; // <-- AUSKOMMENTIEREN
+                    if (currentDay > EARTH_YEAR_DAYS) currentDay -= EARTH_YEAR_DAYS;
                 }
                 
                 const daySlider = document.getElementById('day-slider');
                 daySlider.value = currentDay % EARTH_YEAR_DAYS;
-                if (currentDayLabelEl) currentDayLabelEl.textContent = formatDayCount(currentDay);
                 updateUI();
             }
             // --- Ende Änderung 2 ---
