@@ -308,7 +308,7 @@
             position: fixed;
             top: 50%;
             left: 50%;
-            transform: translate(-50%, -50%);
+            transform: translate(-50%, -50%) translateZ(0);
             background: rgba(0, 0, 0, 0.9);
             color: #fff;
             padding: 20px;
@@ -363,6 +363,7 @@
             bottom: 20px;
             right: 20px;
             z-index: 1001; 
+            transform: translateZ(0);
             background-color: #00ffff;
             color: #000;
             border: 2px solid #000;
@@ -379,7 +380,7 @@
             position: fixed;
             top: 50%;
             left: 50%;
-            transform: translate(-50%, -50%);
+            transform: translate(-50%, -50%) translateZ(0);
             background: rgba(0, 20, 0, 0.95); 
             color: #0f0; 
             padding: 25px;
@@ -2500,7 +2501,7 @@
         }
 
         function resetUfoDialog() {
-            document.getElementById('ufo-dialog-text').textContent = "Wir sind auf dem Weg zur Erde um diese zu übernehmen. Weißt du wo die ist?";
+            document.getElementById('ufo-dialog-text').textContent = "Bist du von der Klasse 6b? Wir sind auf dem Weg zur Erde, um Herr Maurer zu entführen. Weißt du wo das ist?";
             document.getElementById('ufo-initial-buttons').style.display = 'flex';
             document.getElementById('ufo-close-group').style.display = 'none';
         }
