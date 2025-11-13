@@ -220,6 +220,7 @@
         
         /* --- NEU: Style für Frequenz-Button --- */
         #demo-freq {
+            width: 100%;
             margin-bottom: 5px;
             font-size: 13px;
         }
@@ -894,7 +895,7 @@
                 this.group.add(this.mesh);
 
                 this.glowSprite = new THREE.Sprite(new THREE.SpriteMaterial({ 
-                    map: new THREE.TextureLoader().load('https://cdn.jsdelivr.net/gh/NisuSchnisuu/Simulation-Mondphasen@main/Images/comet_sprite.png'), 
+                    map: new THREE.TextureLoader().load('https://threejs.org/examples/textures/sprites/glow.png'), 
                     color: this.color, 
                     transparent: true, 
                     blending: THREE.AdditiveBlending,
@@ -1757,12 +1758,12 @@
             const textureLoader = new THREE.TextureLoader();
 
             const starGeometry = new THREE.SphereGeometry(4000, 32, 32); 
-            const starTexture = textureLoader.load('https://cdn.jsdelivr.net/gh/NisuSchnisuu/Simulation-Mondphasen@main/Images/2k_stars.jpg');
+            const starTexture = textureLoader.load('https://cdn.jsdelivr.net/gh/NisuSchnisuu/Simulation-Mondphasen@main/Images/8k_stars_milky_way.jpg');
             const starMaterial = new THREE.MeshBasicMaterial({ map: starTexture, side: THREE.BackSide });
             starField = new THREE.Mesh(starGeometry, starMaterial);
             scene.add(starField);
 
-	        const sunTexture = textureLoader.load('https://cdn.jsdelivr.net/gh/NisuSchnisuu/Simulation-Mondphasen@main/Images/2k_sun.jpg');
+	        const sunTexture = textureLoader.load('https://cdn.jsdelivr.net/gh/NisuSchnisuu/Simulation-Mondphasen@main/Images/8k_sun.jpg');
             const sunMaterial = new THREE.MeshBasicMaterial({ map: sunTexture });
 	        sun = new THREE.Mesh(new THREE.SphereGeometry(SUN_RADIUS, 32, 32), sunMaterial);
             
@@ -2068,11 +2069,7 @@
             
             // *** ÄNDERUNG 2: Listener für Zurückspul-Button ***
             const rewindBtn = document.getElementById('rewind-btn');
-            rewindBtn.addEventListener('mousedown', startRewind);
-            rewindBtn.addEventListener('mouseup', stopRewind);
-            rewindBtn.addEventListener('mouseleave', stopRewind); // Wichtig, falls Maus abrutscht
-            rewindBtn.addEventListener('touchstart', startRewind, { passive: false });
-            rewindBtn.addEventListener('touchend', stopRewind);
+            rewindBtn.addEventListener('click', toggleRewind);
             // --- Ende Änderung 2 ---
             
             const daySlider = document.getElementById('day-slider');
@@ -2530,17 +2527,23 @@
         }
         
         // *** ÄNDERUNG 2: Handler-Funktionen für Zurückspulen ***
-        function startRewind(e) {
-            e.preventDefault();
-            if (isDemoActive || isRealScaleActive) {
-                return; // Nicht während Demos oder Real-Scale zurückspulen
+        function toggleRewind() {
+            // Prüfen, ob wir gerade zurückspulen
+            if (isRewinding) {
+                // Ja -> also anhalten
+                stopRewind();
+            } else {
+                // Nein -> also starten (das ist die Logik aus der alten startRewind-Funktion)
+                if (isDemoActive || isRealScaleActive) {
+                    return; // Nicht während Demos oder Real-Scale zurückspulen
+                }
+                
+                isRewinding = true;
+                if (isPlaying) {
+                    togglePlay(); // Anhalten, wenn abgespielt wird
+                }
+                document.getElementById('rewind-btn').classList.add('playing'); // Visuelles Feedback
             }
-            
-            isRewinding = true;
-            if (isPlaying) {
-                togglePlay(); // Anhalten, wenn abgespielt wird
-            }
-            document.getElementById('rewind-btn').classList.add('playing'); // Visuelles Feedback
         }
 
         function stopRewind() {
@@ -3968,12 +3971,7 @@ function jumpToSeason(day, clickedBtn) {
         }
         function onTouchEnd(event) {
             const targetElement = event.target;
-            // *** ÄNDERUNG 2: Sicherstellen, dass der Rewind-Button losgelassen wird ***
-            if (isRewinding && targetElement.id === 'rewind-btn') {
-                 stopRewind();
-                 event.preventDefault(); // Verhindert Klick-Events
-                 return;
-            }
+            
             // --- Ende Änderung 2 ---
 
             if (isDragging) { isDragging = false; return; }
