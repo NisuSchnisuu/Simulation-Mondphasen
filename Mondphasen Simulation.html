@@ -894,7 +894,7 @@
                 this.group.add(this.mesh);
 
                 this.glowSprite = new THREE.Sprite(new THREE.SpriteMaterial({ 
-                    map: new THREE.TextureLoader().load('https://threejs.org/examples/textures/sprites/glow.png'), 
+                    map: new THREE.TextureLoader().load('https://cdn.jsdelivr.net/gh/NisuSchnisuu/Simulation-Mondphasen@main/Images/comet_sprite.png'), 
                     color: this.color, 
                     transparent: true, 
                     blending: THREE.AdditiveBlending,
