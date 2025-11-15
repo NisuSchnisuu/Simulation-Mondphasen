@@ -6,8 +6,17 @@
     <title>Sonnensystem-Simulation (6. Klasse) - Realistische Bahnen & Saturnschatten</title>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/DRACOLoader.js"></script>
     <style>
+        html {
+            height: 100%;
+            width: 100%;
+            margin: 0;
+        }
         body {
+            height: 100%;
+            width: 100%;
             margin: 0;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Inter", sans-serif;
             background-color: #000;
@@ -591,11 +600,83 @@
         }
 
         /* --- Ende Touch-Freundliche Slider --- */
+        #loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url('https://cdn.jsdelivr.net/gh/NisuSchnisuu/Simulation-Mondphasen@main/ImagesGit/loading_screen.webp');
+            background-size: cover;
+            background-position: center center;
+            background-repeat: no-repeat;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999; /* Über allem anderen */
+            transition: opacity 0.5s ease-out; /* Für sanftes Ausblenden */
+            color: #fff;
+            position: relative;
+            flex-grow: 1;
+        }
+
+        #loading-screen::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            /* Passe die Deckkraft (0.6 = 60%) an, wie es dir gefällt */
+            background-color: rgba(0, 0, 0, 0.6); 
+            z-index: 1; /* Liegt zwischen Hintergrundbild und Inhalt */
+        }
+
+        #loading-screen p {
+            font-size: 18px;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Inter", sans-serif;
+            margin-top: 20px;
+            margin-bottom: 0;
+            position: relative;
+            z-index: 2;
+        }
+
+        /* Simpler CSS-Spinner */
+        
+
+        /* --- NEU: Ladebalken-Stile --- */
+        #progress-bar-container {
+            width: 80%; /* Breite des Balkens */
+            max-width: 300px;
+            height: 10px; /* Höhe des Balkens */
+            background-color: #333; /* Hintergrundfarbe (leerer Balken) */
+            border: 1px solid #555;
+            border-radius: 5px;
+            overflow: hidden; /* Stellt sicher, dass der innere Balken abgerundet ist */
+            margin-top: 15px; /* Abstand zum Text */
+            position: relative;
+            z-index: 2;
+        }
+
+        #progress-bar {
+            width: 0%; /* Startet bei 0% */
+            height: 100%;
+            background-color: #00ffff; /* Füllfarbe (deine Akzentfarbe) */
+            border-radius: 5px;
+            transition: width 0.3s ease-out; /* Für sanften Fortschritt */
+        }
 
 
     </style>
 </head>
 <body>
+    <div id="loading-screen">
+        <p id="loading-text">Laden...</p>
+        <div id="progress-bar-container">
+            <div id="progress-bar"></div>
+        </div>
+    </div>
 
     <div id="container"></div>
 
@@ -648,6 +729,11 @@
                         Bahnen
                     </label>
                 </div>
+
+            <label class="checkbox-label" style="margin-top: 10px; padding-top: 10px; border-top: 1px dashed #444;">
+                    <input type="checkbox" id="human-objects-checkbox" checked>
+                    Menschl. Objekte anzeigen (ISS)
+                </label>
     
             
             </div> <label for="darkness-slider" style="margin-top: 10px;">Helligkeit (Nachtseite): <span id="darkness-label">0.30</span></label>
@@ -787,6 +873,14 @@
         let jupiterMoonShadowUniforms = null;
         let jupiterMoons = [];
 
+//Load Screen
+        let loadingManager;
+
+        // --- NEU: Für 3D-Modelle ---
+        let loaded3DModels = []; // Ein Array, das alle unsere Modelle aufnimmt
+        let humanObjectsCheckbox;  // Die Checkbox zur Steuerung
+        // --- ENDE NEU ---
+
         //Ecliptic-Plane
         let earthEclipticPlane, moonEclipticPlane;
         let eclipticPlaneCheckbox;
@@ -865,13 +959,7 @@
         let mouse;
         let clickableObjects = [];
         
-        // --- *** ÄNDERUNG: Veraltete Touch-Variablen entfernt *** ---
-        // let touchStartX = 0;
-        // let touchStartY = 0;
-        // let isDragging = false;
-        // const dragThreshold = 10;
-        
-        // --- NEU: Zeitstempel für iPad-Ghost-Click-Fix ---
+        // Zeitstempel für iPad-Ghost-Click-Fix ---
         let lastTouchTime = 0;
         // --- Ende NEU ---
 
@@ -972,8 +1060,9 @@
 
                 const cometGeo = new THREE.DodecahedronGeometry(this.radius, 1);
                 
+                //Komet Textur
                 const textureLoader = new THREE.TextureLoader();
-                const rockTexture = textureLoader.load('https://cdn.jsdelivr.net/gh/mrdoob/three.js@master/examples/textures/planets/moon_1024.jpg', undefined, undefined, (err) => {});
+                const rockTexture = textureLoader.load('mrdoob/three.js@master/examples/textures/planets/moon_1024.jpg', undefined, undefined, (err) => {});
 
                 this.material = new THREE.MeshStandardMaterial({ 
                     map: rockTexture,         
@@ -1619,6 +1708,51 @@
         }
 
         function init() {
+
+            //Loading Screen
+            loadingManager = new THREE.LoadingManager();
+            
+            // Wird aufgerufen, wenn ALLES geladen ist
+            loadingManager.onLoad = () => {
+                console.log('Alle Assets geladen.');
+                const loadingScreen = document.getElementById('loading-screen');
+                if (loadingScreen) {
+                    loadingScreen.style.opacity = '0'; // Fade-Out starten
+                    
+                    // Nach der Animation aus dem DOM entfernen/verstecken
+                    setTimeout(() => {
+                        loadingScreen.style.display = 'none';
+                    }, 500); // Muss zur CSS-Transitionszeit passen
+                }
+            };
+            
+            // (Optional) Zeigt den Ladefortschritt in der Konsole und im Text
+            loadingManager.onProgress = (url, itemsLoaded, itemsTotal) => {
+                const progressBar = document.getElementById('progress-bar');
+                const percent = (itemsLoaded / itemsTotal) * 100;
+                if (progressBar) {
+                    progressBar.style.width = percent + '%';
+                }
+
+                // --- NEU: 2. Text aktualisieren (Laden... + Prozentzahl) ---
+                const loadingText = document.getElementById('loading-text');
+                if (loadingText) {
+                    // Math.round() sorgt für eine saubere Zahl (z.B. 85% statt 85.123%)
+                    loadingText.textContent = `Laden... (${Math.round(percent)}%)`;
+                }
+                
+                console.log(`Lade: ${url} (${itemsLoaded}/${itemsTotal})`);
+            };
+
+            // (Optional) Fängt Ladefehler ab
+            loadingManager.onError = (url) => {
+                console.error('Fehler beim Laden von: ' + url);
+                const loadingText = document.getElementById('loading-text');
+                if (loadingText) {
+                    loadingText.textContent = `Fehler beim Laden von Assets. Bitte neu laden.`;
+                }
+            };
+
             distanceLabelEl = document.getElementById('distance-label');
             currentDayLabelEl = document.getElementById('current-day-label');
 
@@ -1698,6 +1832,7 @@
             // --- ENDE NEU ---
 
             createOrbits();
+            load3DModels();
             setupUI();
 
             animate();
@@ -1705,9 +1840,7 @@
             window.addEventListener('resize', onWindowResize);
             window.addEventListener('click', onMouseClick, false);
             
-            // --- *** ÄNDERUNG: Veraltete Touch-Listener entfernt *** ---
-            // window.addEventListener('touchstart', onTouchStart, false);
-            // window.addEventListener('touchmove', onTouchMove, false);
+            
             window.addEventListener('touchend', onTouchEnd, false);
 
             window.addEventListener('keydown', (e) => {
@@ -1732,8 +1865,8 @@
         }
         
         function definePlanetData() {
-            const textureBasePath = 'https://cdn.jsdelivr.net/gh/NisuSchnisuu/Simulation-Mondphasen@main/Images/';
-            const moonTextureBasePath = 'https://cdn.jsdelivr.net/gh/NisuSchnisuu/Simulation-Mondphasen@main/Images/';
+            const textureBasePath = 'https://cdn.jsdelivr.net/gh/NisuSchnisuu/Simulation-Mondphasen@main/ImagesGit/Objects/';
+            const moonTextureBasePath = 'https://cdn.jsdelivr.net/gh/NisuSchnisuu/Simulation-Mondphasen@main/ImagesGit/Objects/Moons/';
             const degToRad = Math.PI / 180;
             
             planetsData = [
@@ -1742,7 +1875,7 @@
                     radius: 0.95 * SCENE_SCALE, 
                     distance: 110 * SCENE_SCALE, 
                     yearDays: 88, 
-                    texture: textureBasePath + '2k_mercury.jpg', 
+                    texture: textureBasePath + '2k_mercury.webp', 
                     axialTilt: 0.03, 
                     rotationSpeed: 0.017,
                     ecc: 0.205, 
@@ -1758,7 +1891,7 @@
                     radius: 2.4 * SCENE_SCALE, 
                     distance: 200 * SCENE_SCALE, 
                     yearDays: 225, 
-                    texture: textureBasePath + '2k_venus_surface.jpg', 
+                    texture: textureBasePath + '2k_venus_surface.webp', 
                     axialTilt: 177.0, rotationSpeed: -0.0041,
                     ecc: 0.007, 
                     perihelionAngle: 131.53 * degToRad, 
@@ -1773,7 +1906,7 @@
                     radius: 1.3 * SCENE_SCALE, 
                     distance: 415 * SCENE_SCALE, 
                     yearDays: 687, 
-                    texture: textureBasePath + '2k_mars.jpg', 
+                    texture: textureBasePath + '2k_mars.webp', 
                     axialTilt: 25.19, 
                     rotationSpeed: 0.97,
                     ecc: 0.094, 
@@ -1789,7 +1922,7 @@
                     radius: 28.0 * SCENE_SCALE, 
                     distance: 900 * SCENE_SCALE, 
                     yearDays: 4333, 
-                    texture: textureBasePath + '2k_jupiter.jpg', 
+                    texture: textureBasePath + '2k_jupiter.webp', 
                     axialTilt: 3.13, 
                     rotationSpeed: 2.43,
                     ecc: 0.049, 
@@ -1803,7 +1936,7 @@
                             distance: 49.5 * SCENE_SCALE, 
                             speed: 0.565,
                             startAngle: Math.random() * Math.PI * 2, 
-                            texture: moonTextureBasePath + 'jupiter_io.jpg', 
+                            texture: moonTextureBasePath + 'jupiter_io.webp', 
                             inclination: 0.05 * degToRad,
                             //Fakten
                             earthCompareRadius: '0,28x Erde', radius_km: '1.821', distance_Mio_km: '421.700 km', umlaufzeit: '1,77 Tage', temperatur: 'ca. -143°C', parentName: 'Jupiter',
@@ -1815,7 +1948,7 @@
                             distance: 78.9 * SCENE_SCALE, 
                             speed: 0.282, 
                             startAngle: Math.random() * Math.PI * 2, 
-                            texture: moonTextureBasePath + 'jupiter_europa.jpg', 
+                            texture: moonTextureBasePath + 'jupiter_europa.webp', 
                             inclination: 0.47 * degToRad,
                             //Fakten
                             earthCompareRadius: '0,25x Erde', radius_km: '1.560', distance_Mio_km: '671.100 km', umlaufzeit: '3,55 Tage', temperatur: 'ca. -170°C', parentName: 'Jupiter',
@@ -1827,7 +1960,7 @@
                             distance: 126 * SCENE_SCALE, 
                             speed: 0.14, 
                             startAngle: Math.random() * Math.PI * 2,
-                            texture: moonTextureBasePath + 'jupiter_ganymede.jpg', 
+                            texture: moonTextureBasePath + 'jupiter_ganymede.webp', 
                             inclination: 0.20 * degToRad,
                             //Fakten
                             earthCompareRadius: '0,41x Erde', radius_km: '2.634', distance_Mio_km: '1,07 Mio. km', umlaufzeit: '7,15 Tage', temperatur: 'ca. -163°C', parentName: 'Jupiter',
@@ -1839,7 +1972,7 @@
                             distance: 220 * SCENE_SCALE, 
                             speed: 0.060, 
                             startAngle: Math.random() * Math.PI * 2,
-                            texture: moonTextureBasePath + 'jupiter_callisto.jpg', 
+                            texture: moonTextureBasePath + 'jupiter_callisto.webp', 
                             inclination: 0.20 * degToRad,
                             //Fakten
                             earthCompareRadius: '0,38x Erde', radius_km: '2.410', distance_Mio_km: '1,88 Mio. km', umlaufzeit: '16,69 Tage', temperatur: 'ca. -139°C', parentName: 'Jupiter',
@@ -1855,7 +1988,7 @@
                     radius: 23.8 * SCENE_SCALE, 
                     distance: 1350 * SCENE_SCALE, 
                     yearDays: 10759, 
-                    texture: textureBasePath + '2k_saturn.jpg', 
+                    texture: textureBasePath + '2k_saturn.webp', 
                     axialTilt: 26.73, 
                     rotationSpeed: 2.22,
                     ecc: 0.057, 
@@ -1864,7 +1997,7 @@
                     planetType_de: 'Äusserer Gasriese',
                     // UPDATE: Ring-Daten nun generisch hier
                     ring: {
-                        texture: textureBasePath + '2k_saturn_ring_alpha.png',
+                        texture: textureBasePath + 'Rings/2k_saturn_ring.webp',
                         innerRadius: 1.2, // Multiplikator vom Planetenradius
                         outerRadius: 2.7, // Multiplikator vom Planetenradius
                     },
@@ -1874,7 +2007,7 @@
                             radius: 1.01 * SCENE_SCALE, 
                             distance: 144.9 * SCENE_SCALE, 
                             speed: 0.063, 
-                            texture: moonTextureBasePath + 'saturn_titan.jpg', 
+                            texture: moonTextureBasePath + 'saturn_titan.webp', 
                             inclination: 0.35 * degToRad,
                             //Fakten
                             earthCompareRadius: '0,40x Erde', radius_km: '2.574', distance_Mio_km: '1,22 Mio. km', umlaufzeit: '15,95 Tage', temperatur: 'ca. -179°C', parentName: 'Saturn',
@@ -1890,7 +2023,7 @@
                     radius: 10.0 * SCENE_SCALE, 
                     distance: 1620 * SCENE_SCALE, 
                     yearDays: 30687, 
-                    texture: textureBasePath + '2k_uranus_dunkler.jpg', 
+                    texture: textureBasePath + '2k_uranus_dunkler.webp', 
                     axialTilt: 97.77, rotationSpeed: 1.38,
                     ecc: 0.046, 
                     perihelionAngle: 170.96 * degToRad, 
@@ -1898,7 +2031,7 @@
                     planetType_de: 'Äusserer Eisriese',
                     // UPDATE: Uranus hat jetzt auch Ringe!
                     ring: {
-                        texture: textureBasePath + 'Uranus_Rings_b.png', // Platzhalter-Textur (die gleiche wie Saturn)
+                        texture: textureBasePath + 'Rings/uranus_ring.webp', // Platzhalter-Textur (die gleiche wie Saturn)
                         innerRadius: 1.05, 
                         outerRadius: 3.4, 
                     },
@@ -1911,7 +2044,7 @@
                     radius: 9.8 * SCENE_SCALE, 
                     distance: 1980 * SCENE_SCALE, 
                     yearDays: 60190, 
-                    texture: textureBasePath + '2k_neptune.jpg', 
+                    texture: textureBasePath + '2k_neptune.webp', 
                     axialTilt: 28.32, 
                     rotationSpeed: 1.49,
                     ecc: 0.009, 
@@ -1926,7 +2059,7 @@
                     name: 'Pluto', 
                     radius: 0.19 * SCENE_SCALE, 
                     distance: 2340 * SCENE_SCALE, 
-                    yearDays: 90582, texture: textureBasePath + '2k_pluto.jpg', 
+                    yearDays: 90582, texture: textureBasePath + '2k_pluto.webp', 
                     axialTilt: 122.5, 
                     rotationSpeed: -0.156,
                     ecc: 0.244, 
@@ -1945,15 +2078,15 @@
         }
 
         function createSolarSystem() {
-            const textureLoader = new THREE.TextureLoader();
+            const textureLoader = new THREE.TextureLoader(loadingManager);
 
             const starGeometry = new THREE.SphereGeometry(5000, 32, 32); 
-            const starTexture = textureLoader.load('https://cdn.jsdelivr.net/gh/NisuSchnisuu/Simulation-Mondphasen@main/Images/8k_stars_milky_way.jpg');
+            const starTexture = textureLoader.load('https://cdn.jsdelivr.net/gh/NisuSchnisuu/Simulation-Mondphasen@main/ImagesGit/Scenery/8k_stars_milky_way.webp');
             const starMaterial = new THREE.MeshBasicMaterial({ map: starTexture, side: THREE.BackSide });
             starField = new THREE.Mesh(starGeometry, starMaterial);
             scene.add(starField);
 
-	        const sunTexture = textureLoader.load('https://cdn.jsdelivr.net/gh/NisuSchnisuu/Simulation-Mondphasen@main/Images/8k_sun.jpg');
+	        const sunTexture = textureLoader.load('https://cdn.jsdelivr.net/gh/NisuSchnisuu/Simulation-Mondphasen@main/ImagesGit/Objects/8k_sun.webp');
             const sunMaterial = new THREE.MeshBasicMaterial({ map: sunTexture });
 	        sun = new THREE.Mesh(new THREE.SphereGeometry(SUN_RADIUS, 32, 32), sunMaterial);
             
@@ -1975,9 +2108,9 @@
             const earthMaterial = new THREE.ShaderMaterial({
                 vertexShader: earthVertexShader, fragmentShader: earthFragmentShader,
                 uniforms: {
-                    dayTexture: { value: textureLoader.load('https://cdn.jsdelivr.net/gh/NisuSchnisuu/Simulation-Mondphasen@main/Images/earth-day.jpg') },
-                    nightTexture: { value: textureLoader.load('https://cdn.jsdelivr.net/gh/NisuSchnisuu/Simulation-Mondphasen@main/Images/2k_earth_nightmap.jpg') },
-                    uSunPosition: { value: new THREE.Vector3(0, 0, 0) }, uObjectWorldPosition: { value: new THREE.Vector3() }, uNightBrightness: { value: 0.3 }, 
+                    dayTexture: { value: textureLoader.load('https://cdn.jsdelivr.net/gh/NisuSchnisuu/Simulation-Mondphasen@main/ImagesGit/Objects/earth_day.webp') },
+                    nightTexture: { value: textureLoader.load('https://cdn.jsdelivr.net/gh/NisuSchnisuu/Simulation-Mondphasen@main/ImagesGit/Objects/8k_earth_nightmap.webp') },
+                    uSunPosition: { value: new THREE.Vector3(0, 0, 0) }, uObjectWorldPosition: { value: new THREE.Vector3() }, uNightBrightness: { value: 0.3 },
                     uSofiDemoActive: { value: false }, uMoonPosition: { value: new THREE.Vector3() }, uMoonRadius: { value: MOON_RADIUS }, uSunRadius: { value: SUN_RADIUS }, 
 
                     uHasNightTexture: { value: true }
@@ -2030,7 +2163,7 @@
             originalMoonMaterial = new THREE.ShaderMaterial({
                 vertexShader: moonVertexShader, fragmentShader: moonFragmentShader,
                 uniforms: {
-                    dayTexture: { value: textureLoader.load('https://cdn.jsdelivr.net/gh/NisuSchnisuu/Simulation-Mondphasen@main/2k_moon.jpg') },
+                    dayTexture: { value: textureLoader.load('https://cdn.jsdelivr.net/gh/NisuSchnisuu/Simulation-Mondphasen@main/ImagesGit/Objects/Moons/2k_moon.webp') },
                     uSunPosition: { value: new THREE.Vector3(0, 0, 0) }, uEarthPosition: { value: new THREE.Vector3() }, uObjectWorldPosition: { value: new THREE.Vector3() },
                     uEarthRadius: { value: EARTH_RADIUS }, uSunRadius: { value: SUN_RADIUS }, uMoonRadius: { value: MOON_RADIUS }, uNightBrightness: { value: 0.3 },
                     uDemoActive: { value: false }, uShadowBrightness: { value: 0.0 }, uRedOverlayIntensity: { value: 0.0 } 
@@ -2188,6 +2321,84 @@
             });
         }
 
+        // --- NEUE SKALIERBARE FUNKTION ZUM LADEN VON 3D-MODELLEN ---
+        function load3DModels() {
+            
+            // 1. Definiere alle Modelle, die wir laden wollen
+            // ❗ WICHTIG: Ersetze 'iss.glb' mit dem Pfad zu deinem 3D-Modell!
+            const modelsToLoad = [
+                {
+                    id: 'iss',
+                    url: 'https://cdn.jsdelivr.net/gh/NisuSchnisuu/Simulation-Mondphasen@main/ImagesGit/3D-Models/ISS_Model.glb',
+                    scale: 0.01, // Sehr klein, wie gewünscht
+                    orbitTarget: 'earth', // (Reserviert für später)
+                    altitude: EARTH_RADIUS + 0.5, // 0.5 Einheiten über der Erde
+                    inclination: 51.6, // Grad
+                    orbitsPerDay: 15.6, // Umkreisungen pro Tag
+                    updateType: 'earth_orbit' // Logik-Schalter für updatePositions
+                }
+                // HIER KÖNNTEST DU EINFACH MEHR OBJEKTE HINZUFÜGEN
+                // { id: 'hubble', url: 'hubble.glb', ... }
+            ];
+
+            
+            // ---Draco Loader initialisieren ---
+            const dracoLoader = new THREE.DRACOLoader();
+            // WICHTIG: Pfad zu den Decoder-Dateien auf dem CDN
+            dracoLoader.setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/libs/draco/');
+            
+            const loader = new THREE.GLTFLoader(loadingManager);
+            // Dem GLTFLoader sagen, dass er den DracoLoader verwenden soll
+            loader.setDRACOLoader(dracoLoader);
+
+            // 3. Lade jedes Modell in der Liste
+            modelsToLoad.forEach(modelData => {
+                loader.load(modelData.url, (gltf) => {
+                    // Das geladene 3D-Modell (die "scene")
+                    const modelScene = gltf.scene;
+                    
+                    // Skalierung anwenden
+                    modelScene.scale.set(modelData.scale, modelData.scale, modelData.scale);
+
+                    // Erstelle den Pivot-Punkt (den Rotations-Anker)
+                    // Dieser Pivot wird an der Position der Erde sein
+                    const pivot = new THREE.Group();
+                    
+                    // Positioniere das Modell *innerhalb* des Pivots
+                    // (auf der X-Achse, in der gewünschten Höhe)
+                    modelScene.position.x = modelData.altitude;
+                    
+                    // Füge das Modell zum Pivot hinzu
+                    pivot.add(modelScene);
+                    
+                    // Füge den Pivot zur Haupt-Szene hinzu
+                    scene.add(pivot);
+
+                    // Speichere alle Infos in unserem globalen Array
+                    const modelObject = {
+                        scene: modelScene, // Das 3D-Objekt selbst
+                        pivot: pivot,      // Der Rotationspunkt
+                        data: modelData    // Die Konfigurationsdaten
+                    };
+                    loaded3DModels.push(modelObject);
+                    
+                    // Setze die initiale Sichtbarkeit basierend auf der Checkbox
+                    if (humanObjectsCheckbox) {
+                        // (humanObjectsCheckbox wird in setupUI() gefunden)
+                        const isChecked = humanObjectsCheckbox.checked;
+                        modelScene.visible = isChecked;
+                        pivot.visible = isChecked; // Auch Pivot steuern
+                    }
+
+                    console.log(`3D-Modell '${modelData.id}' erfolgreich geladen.`);
+
+                }, undefined, (error) => {
+                    console.error(`Fehler beim Laden des Modells '${modelData.id}':`, error);
+                });
+            });
+        }
+        // --- ENDE NEUE FUNKTION ---
+
         function createOrbits() {
             const createEllipticalOrbitLine = (a, e, perihelionAngle, color, segments = 1024) => {
                 const points = [];
@@ -2299,6 +2510,23 @@
             if (earthEclipticPlane) earthEclipticPlane.visible = eclipticPlaneCheckbox.checked;
             if (moonEclipticPlane) moonEclipticPlane.visible = eclipticPlaneCheckbox.checked;
             // --- Ende NEU ---
+            
+            //3D-Mensch. Objekt
+            humanObjectsCheckbox = document.getElementById('human-objects-checkbox');
+            humanObjectsCheckbox.addEventListener('change', (e) => {
+                const isChecked = e.target.checked;
+                // Schleife durch alle geladenen Modelle und steuere ihre Sichtbarkeit
+                loaded3DModels.forEach(model => {
+                    model.scene.visible = isChecked;
+                    model.pivot.visible = isChecked; // Wichtig: Auch den Pivot steuern
+                });
+            });
+            // Initialen Status beim Laden setzen
+            loaded3DModels.forEach(model => {
+                const isChecked = humanObjectsCheckbox.checked;
+                model.scene.visible = isChecked;
+                model.pivot.visible = isChecked;
+            });
 
             planetsVisibleCheckbox.addEventListener('change', (e) => {
                 const isVisible = e.target.checked;
@@ -3256,10 +3484,13 @@
             demoButtons.style.display = 'none'; 
             demoControlButtons.style.display = 'flex'; 
             demoSpeedControl.style.display = 'block'; 
-            // --- NEU: Flächen ausblenden ---
+            // Flächen ausblenden ---
             if (earthEclipticPlane) earthEclipticPlane.visible = false;
             if (moonEclipticPlane) moonEclipticPlane.visible = false;
-            // --- Ende NEU ---
+
+            //3D-Modelle ausblenden ---
+            loaded3DModels.forEach(model => model.pivot.visible = false);
+            
             
             if (type === 'sofi') {
                 earthTiltPivot.rotation.z = EARTH_TILT_RAD;
@@ -3328,7 +3559,13 @@
                 if (earthEclipticPlane) earthEclipticPlane.visible = isChecked;
                 if (moonEclipticPlane) moonEclipticPlane.visible = isChecked;
             }
-        // --- Ende NEU ---
+
+            // 3D-Modelle wiederherstellen (gem. Checkbox) ---
+            if (humanObjectsCheckbox) {
+                const isChecked = humanObjectsCheckbox.checked;
+                loaded3DModels.forEach(model => model.pivot.visible = isChecked);
+            }
+        
             currentDay = 0; 
             if (currentDayLabelEl) currentDayLabelEl.textContent = formatDayCount(currentDay);
             const daySlider = document.getElementById('day-slider');
@@ -3385,12 +3622,14 @@
             // --- NEU: Flächen ausblenden ---
             if (earthEclipticPlane) earthEclipticPlane.visible = false;
             if (moonEclipticPlane) moonEclipticPlane.visible = false;
-            // --- Ende NEU ---
+            // 3D-Modelle ausblenden
+            loaded3DModels.forEach(model => model.pivot.visible = false);
+            
             otherPlanetOrbits.forEach(o => o.visible = false);
 
             otherMoons.forEach(moonObj => { moonObj.mesh.visible = false; });
             
-            // --- NEU: Planeten explizit sichtbar machen ---
+            // --- Planeten explizit sichtbar machen ---
             otherPlanetControls.forEach(ctrl => { ctrl.orbit.visible = true; });
             // --- Ende NEU ---
 
@@ -3493,7 +3732,7 @@
             // --- NEU: Planeten-Sichtbarkeit basierend auf Checkbox wiederherstellen ---
             const planetsShouldBeVisible = planetsVisibleCheckbox.checked;
             otherPlanetControls.forEach(ctrl => { ctrl.orbit.visible = planetsShouldBeVisible; });
-            // --- Ende NEU ---
+            
             
             earthOrbitLine.visible = orbitCheckbox.checked;
             moonOrbitLine.visible = orbitCheckbox.checked;
@@ -3503,7 +3742,13 @@
                 if (earthEclipticPlane) earthEclipticPlane.visible = isChecked;
                 if (moonEclipticPlane) moonEclipticPlane.visible = isChecked;
             }
-            // --- Ende NEU ---
+
+            // --- 3D-Modelle wiederherstellen (gem. Checkbox) ---
+            if (humanObjectsCheckbox) {
+                const isChecked = humanObjectsCheckbox.checked;
+                loaded3DModels.forEach(model => model.pivot.visible = isChecked);
+            }
+            
             otherPlanetOrbits.forEach(o => o.visible = planetsOrbitCheckbox.checked);
 
             otherMoons.forEach(moonObj => { moonObj.mesh.visible = true; });
@@ -3543,7 +3788,11 @@
                 // Wir blenden das übergeordnete <label>-Element aus (das 'display: flex' hat)
                 eclipticPlaneLabel.parentElement.style.display = flexStyle;
             }
-            // --- (ENDE) ---
+            
+            // --- 3D-Modell-Checkbox auch ausblenden ---
+            if (humanObjectsCheckbox) {
+                humanObjectsCheckbox.parentElement.style.display = flexStyle;
+            }
 
             document.getElementById('focus-ecliptic').style.display = displayStyle;
             
@@ -4149,6 +4398,32 @@ function jumpToSeason(day, clickedBtn) {
                 }
             }
 
+            // 3D-Modelle (z.B. ISS) aktualisieren ---
+            if (loaded3DModels.length > 0) {
+                let tempEarthPos = new THREE.Vector3(); // Wiederverwendbarer Vektor
+                
+                loaded3DModels.forEach(model => {
+                    // Prüfe, welche Update-Logik dieses Modell benötigt
+                    if (model.data.updateType === 'earth_orbit') {
+                        
+                        // 1. Finde das Zielobjekt (Erde)
+                        earth.getWorldPosition(tempEarthPos);
+                        
+                        // 2. Binde den Pivot an die Erdposition
+                        model.pivot.position.copy(tempEarthPos);
+                        
+                        // 3. Berechne die Rotation basierend auf dem Tag
+                        const orbitsPerDay = model.data.orbitsPerDay;
+                        model.pivot.rotation.y = (day * orbitsPerDay) * Math.PI * 2;
+                        
+                        // 4. Setze die Neigung (Inklination) relativ zur Erdachse
+                        const inclinationRad = (model.data.inclination * Math.PI) / 180;
+                        model.pivot.rotation.x = EARTH_TILT_RAD + inclinationRad;
+                    }
+                    // HIER KÖNNTEST DU SPÄTER ANDERE updateTypes hinzufügen (z.B. 'sun_orbit')
+                });
+            }
+
             let tempVec = new THREE.Vector3();
             earth.getWorldPosition(tempVec);
             earth.material.uniforms.uObjectWorldPosition.value.copy(tempVec);
@@ -4384,18 +4659,8 @@ function jumpToSeason(day, clickedBtn) {
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
         }
-
-        // --- *** ÄNDERUNG: Veraltete Touch-Funktionen entfernt *** ---
-        /*
-        function onTouchStart(event) {
-            // ...
-        }
-        function onTouchMove(event) {
-            // ...
-        }
-        */
        
-        // --- *** ÄNDERUNG: onTouchEnd() angepasst *** ---
+         
         function onTouchEnd(event) {
             const targetElement = event.target;
             
