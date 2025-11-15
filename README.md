@@ -373,7 +373,7 @@
             box-shadow: 0 4px 10px rgba(0, 255, 255, 0.3);
             font-size: 14px;
             font-weight: 700;
-            font-family: cursive;
+            font-family: "Courier New", monospace;
             padding: 10px 15px;
         }
 
@@ -663,6 +663,10 @@
                 <button id="focus-moon" class="btn btn-focus">Mond</button>
                 <button id="focus-ecliptic" class="btn btn-focus">Ekliptik-Sicht</button>
             </div>
+            <label class="checkbox-label" style="margin-top: 12px; padding-top: 10px; border-top: 1px dashed #444;">
+                    <input type="checkbox" id="ecliptic-plane-checkbox">
+                    Ekliptik-Flächen (Erde/Mond) anzeigen
+                </label>
             <div id="planet-focus-buttons" class="btn-group" style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #444; display: none;">
             </div>
             <div id="moon-focus-container">
@@ -748,7 +752,7 @@
 
     <div id="ufo-dialog">
         <h3>🛸 Unbekanntes Flugobjekt</h3>
-        <div id="ufo-dialog-text">Bist du von der Klasse 6b? Wir sind auf dem Weg zur Erde, um Herr Maurer zu entführen. Weißt du wo das ist?</div>
+        <div id="ufo-dialog-text">Bist du in der Klasse von Herrn Lehmann? Wir sind auf dem Weg zur Erde, um Herrn Maurer zu entführen. Er hat wichtige Informationen über das Universum, die wir brauchen. Weisst du wo er ist?</div>
         <div class="ufo-btn-group" id="ufo-initial-buttons">
             <button id="ufo-yes-btn" class="ufo-btn">Ja, dort lang! 👉</button>
             <button id="ufo-no-btn" class="ufo-btn">Keine Ahnung 🤷‍♂️</button>
@@ -765,7 +769,6 @@
         let scene, camera, renderer, controls;
         let sun, earth, moon, moonPivot;
         let earthTiltPivot;
-        let switzerlandMarker;
         
         // --- NEU: Globale Variable für Achsenlinie ---
         let earthAxisLine = null;
@@ -780,6 +783,14 @@
         let otherPlanetOrbits = [];
         let otherMoons = []; 
         let planetsData = [];
+
+        let jupiterMoonShadowUniforms = null;
+        let jupiterMoons = [];
+
+        //Ecliptic-Plane
+        let earthEclipticPlane, moonEclipticPlane;
+        let eclipticPlaneCheckbox;
+        // --- Ende NEU ---
         
         let planetRingMaterials = []; 
 
@@ -918,6 +929,7 @@
         let ufo;
         let ufoState = 'inactive'; 
         let ufoSpawnTimer = Math.random() * 180 + 120; 
+        let ufoEncounterCount = 0;
         let ufoWanderTimer = 0;
         let ufoTargetPos = new THREE.Vector3();
         let ufoCurrentTargetObject = null; 
@@ -1212,6 +1224,7 @@
         const earthFragmentShader = `
             uniform sampler2D dayTexture;
             uniform sampler2D nightTexture; 
+            uniform bool uHasNightTexture;
             uniform vec3 uSunPosition;
             uniform vec3 uObjectWorldPosition;
             uniform float uNightBrightness;
@@ -1219,6 +1232,11 @@
             uniform vec3 uMoonPosition;
             uniform float uMoonRadius;
             uniform float uSunRadius;
+            /* --- NEU FÜR JUPITERMONDE --- */
+            uniform bool uCastMoonShadows;
+            uniform vec3 uMoonPositions[4]; /* Array für 4 Mondpositionen */
+            uniform float uMoonRadii[4];   /* Array für 4 Mondradien */
+            /* --- ENDE NEU --- */
             varying vec2 vUv;
             varying vec3 vWorldPosition;
             float calculateMoonShadowIntensity(vec3 pixelPos, vec3 moonPos, float moonRadius, vec3 sunPos, float sunRadius) {
@@ -1242,36 +1260,46 @@
                 float intensity = (dot(objectToFragment, objectToSun) + 1.0) / 2.0;
                 
                 float nightBrightness = uNightBrightness; // Slider-Wert 0.0 bis 0.9
-                
-                // 1. (NEU) Tag/Nacht-Übergang für HINTERGRUND (Schatten)
-                //    Dieser bleibt WEICH (wie du es willst).
                 float lightMix = smoothstep(0.48, 0.59, intensity);
-                
-                // 2. (NEU) Tag/Nacht-Übergang nur für LICHTER
-                //    Dieser ist HART, damit sie nicht in den Tag "bluten".
-                float lightsFade = smoothstep(0.43, 0.53, intensity); // 0.0 = Lichter an, 1.0 = Lichter aus
-
-                // 3. Texturen laden
                 vec4 dayColor = texture2D(dayTexture, vUv);
-                vec4 nightMapColor = texture2D(nightTexture, vUv);
+                
+                /* --- HIER STARTET DIE ÄNDERUNG --- */
+                
+                vec4 finalColor; // Deklaration vorziehen
 
-                // 4. Hintergrund (Land/Meer) berechnen
-                vec4 ambientBackground = dayColor * nightBrightness; 
+                if (uHasNightTexture) {
+                    // 1. (NEU) Tag/Nacht-Übergang nur für LICHTER (Nur für Erde)
+                    float lightsFade = smoothstep(0.43, 0.53, intensity); // 0.0 = Lichter an, 1.0 = Lichter aus
 
-                // 5. (NEU) Lichter berechnen (mit Slider UND hartem Fade)
-                float lightIntensity = 1.0 - nightBrightness;
-                // Wir multiplizieren die Lichter mit (1.0 - lightsFade),
-                // damit sie bei 0.0 (Nacht) voll und bei 1.0 (Tag) aus sind.
-                vec4 cityLights = nightMapColor * lightIntensity * (1.0 - lightsFade);
+                    // 3. Texturen laden
+                    vec4 nightMapColor = texture2D(nightTexture, vUv);
 
-                // 6. Lichter-Maske (für "echt schwarz")
-                float lightMask = smoothstep(0.1, 0.3, nightMapColor.r);
+                    // 4. Hintergrund (Land/Meer) berechnen
+                    vec4 ambientBackground = dayColor * nightBrightness; 
 
-                // 7. Nacht-Textur zusammensetzen
-                vec4 nightColor = mix(ambientBackground, cityLights, lightMask);
+                    // 5. (NEU) Lichter berechnen (mit Slider UND hartem Fade)
+                    float lightIntensity = 1.0 - nightBrightness;
+                    vec4 cityLights = nightMapColor * lightIntensity * (1.0 - lightsFade);
 
-                // 8. Die fertige Nachtfarbe mit der Tagfarbe mischen (mit dem WEICHEN Übergang)
-                vec4 finalColor = mix(nightColor, dayColor, lightMix);
+                    // 6. Lichter-Maske (für "echt schwarz")
+                    float lightMask = smoothstep(0.1, 0.3, nightMapColor.r);
+
+                    // 7. Nacht-Textur zusammensetzen
+                    vec4 nightColor = mix(ambientBackground, cityLights, lightMask);
+                    
+                    // 8. Die fertige Nachtfarbe mit der Tagfarbe mischen
+                    finalColor = mix(nightColor, dayColor, lightMix);
+                    
+                } else {
+                    // EINFACHE LOGIK FÜR ALLE ANDEREN PLANETEN
+                    // (keine Lichter, nur Abdunkeln)
+                    vec4 nightColor = dayColor * nightBrightness;
+                    finalColor = mix(nightColor, dayColor, lightMix);
+                }
+                
+                /* --- HIER ENDET DIE ÄNDERUNG --- */
+
+            
                 
                 // 9. (Unverändert) Sonnenfinsternis-Schatten
                 if (uSofiDemoActive) {
@@ -1280,6 +1308,60 @@
                         finalColor.rgb *= moonShadowIntensity;
                     }
                 }
+
+                /* --- NEU: Jupitermond-Schatten --- */
+                if (uCastMoonShadows) {
+                    float moonShadowIntensity = 1.0;
+                    
+                    /* Wende den Schatten für jeden der 4 Monde an */
+                    for(int i = 0; i < 4; i++) {
+                        if (uMoonRadii[i] > 0.0) {
+                            
+                            /* --- KORREKTUR 2: Korrekte Tiefenberechnung --- */
+                            vec3 sunToMoon = uMoonPositions[i] - uSunPosition;
+                            float moonDepth = length(sunToMoon);      // NEU: Echte Distanz Sonne -> Mond
+                            vec3 shadowAxis = sunToMoon / moonDepth;  // NEU: Normalisieren über Distanz
+                            
+                            vec3 sunToPixel = vWorldPosition - uSunPosition;
+                            float pixelDepth = dot(sunToPixel, shadowAxis); // NEU: Echte Distanz Sonne -> Pixel (projiziert)
+                            
+                            /* * ALT WAR: if (depthInShadow > 0.0) { ... } 
+                             * (depthInShadow war pixelDepth, aber der Check war falsch)
+                             */
+                            
+                            // NEU: Prüfen, ob der Pixel HINTER dem Mond ist (Sonne -> Mond -> Pixel)
+                            if (pixelDepth > moonDepth) { 
+                            
+                                // ALT WAR: vec3 closestPointOnAxis = uSunPosition + shadowAxis * depthInShadow;
+                                vec3 closestPointOnAxis = uSunPosition + shadowAxis * pixelDepth; // NEU: pixelDepth verwenden
+                                float pixelDistanceToAxis = distance(vWorldPosition, closestPointOnAxis);
+                                
+                                /* --- KORREKTUR 1: Schärfere Schatten --- */
+                                // Wir setzen Umbra und Penumbra fast gleich für eine harte Kante
+                                float umbraRadius = uMoonRadii[i] * 0.9;    // WAR: 0.4
+                                float penumbraRadius = uMoonRadii[i] * 1.1; // WAR: 2.0 
+
+                                if (pixelDistanceToAxis < penumbraRadius) {
+                                    if (pixelDistanceToAxis < umbraRadius) {
+                                        // Wir machen den Kernschatten auch dunkler
+                                        moonShadowIntensity *= 0.3; // WAR: 0.6 
+                                    } else {
+                                        float progress = (pixelDistanceToAxis - umbraRadius) / (penumbraRadius - umbraRadius);
+                                        moonShadowIntensity *= mix(0.3, 1.0, progress); // WAR: 0.6
+                                    }
+                                }
+                            }
+                            /* --- ENDE KORREKTUR 2 --- */
+                        }
+                    }
+                    
+                    /* Schatten nur auf der Tagseite anwenden */
+                    if (intensity > 0.48) { /* 0.48 ist der Start der "lightMix" */
+                         finalColor.rgb *= moonShadowIntensity;
+                    }
+                }
+                /* --- ENDE NEU --- */
+
                 gl_FragColor = finalColor;
             }
         `;
@@ -1545,7 +1627,7 @@
             cometControls = document.getElementById('comet-controls');
 
             scene = new THREE.Scene();
-            camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 8000);
+            camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 20000);
             camera.position.set(EARTH_DISTANCE * 1.5, EARTH_DISTANCE * 0.7, EARTH_DISTANCE * 1.5);
             camera.lookAt(0, 0, 0);
 
@@ -1561,6 +1643,7 @@
             controls.enableDamping = true;
             controls.dampingFactor = 0.1;
             controls.touches = { ONE: 0, TWO: 2 };
+            controls.maxDistance = 7000;
             
             controls.addEventListener('start', () => {
                 isUserControllingCamera = true;
@@ -1864,7 +1947,7 @@
         function createSolarSystem() {
             const textureLoader = new THREE.TextureLoader();
 
-            const starGeometry = new THREE.SphereGeometry(4000, 32, 32); 
+            const starGeometry = new THREE.SphereGeometry(5000, 32, 32); 
             const starTexture = textureLoader.load('https://cdn.jsdelivr.net/gh/NisuSchnisuu/Simulation-Mondphasen@main/Images/8k_stars_milky_way.jpg');
             const starMaterial = new THREE.MeshBasicMaterial({ map: starTexture, side: THREE.BackSide });
             starField = new THREE.Mesh(starGeometry, starMaterial);
@@ -1895,7 +1978,9 @@
                     dayTexture: { value: textureLoader.load('https://cdn.jsdelivr.net/gh/NisuSchnisuu/Simulation-Mondphasen@main/Images/earth-day.jpg') },
                     nightTexture: { value: textureLoader.load('https://cdn.jsdelivr.net/gh/NisuSchnisuu/Simulation-Mondphasen@main/Images/2k_earth_nightmap.jpg') },
                     uSunPosition: { value: new THREE.Vector3(0, 0, 0) }, uObjectWorldPosition: { value: new THREE.Vector3() }, uNightBrightness: { value: 0.3 }, 
-                    uSofiDemoActive: { value: false }, uMoonPosition: { value: new THREE.Vector3() }, uMoonRadius: { value: MOON_RADIUS }, uSunRadius: { value: SUN_RADIUS } 
+                    uSofiDemoActive: { value: false }, uMoonPosition: { value: new THREE.Vector3() }, uMoonRadius: { value: MOON_RADIUS }, uSunRadius: { value: SUN_RADIUS }, 
+
+                    uHasNightTexture: { value: true }
                 }
             });
             earth = new THREE.Mesh(new THREE.SphereGeometry(EARTH_RADIUS, 32, 32), earthMaterial);
@@ -1973,6 +2058,8 @@
                 planetTiltPivot.rotation.z = (data.axialTilt * Math.PI) / 180;
                 planetSystemContainer.add(planetTiltPivot);
 
+                const isJupiter = (data.name === 'Jupiter');
+
                 let material;
                 // UPDATE: Generischer Check auf Ringe
                 if (data.ring) {
@@ -1996,13 +2083,29 @@
 
                     planetRingMaterials.push({ mat: material, pivot: planetTiltPivot });
                 } else {
+
                     material = new THREE.ShaderMaterial({
                         vertexShader: earthVertexShader, fragmentShader: earthFragmentShader, 
                         uniforms: {
-                            dayTexture: { value: textureLoader.load(data.texture) }, uSunPosition: { value: new THREE.Vector3(0, 0, 0) }, uObjectWorldPosition: { value: new THREE.Vector3() },
-                            uNightBrightness: { value: 0.3 }, uSofiDemoActive: { value: false }, uMoonPosition: { value: new THREE.Vector3() }, uMoonRadius: { value: 0.1 }, uSunRadius: { value: SUN_RADIUS } 
+                            dayTexture: { value: textureLoader.load(data.texture) }, 
+                            uSunPosition: { value: new THREE.Vector3(0, 0, 0) }, 
+                            uObjectWorldPosition: { value: new THREE.Vector3() },
+                            uNightBrightness: { value: 0.3 }, 
+                            uSofiDemoActive: { value: false }, 
+                            uMoonPosition: { value: new THREE.Vector3() }, 
+                            uMoonRadius: { value: 0.1 }, 
+                            uSunRadius: { value: SUN_RADIUS },
+                            uHasNightTexture: { value: false },
+                            //Jupiter Moon Shadow
+                            uCastMoonShadows: { value: isJupiter },
+                            uMoonPositions: { value: [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()] },
+                            uMoonRadii: { value: [0.0, 0.0, 0.0, 0.0] }
                         }
                     });
+                }
+
+                if (isJupiter) {
+                    jupiterMoonShadowUniforms = material.uniforms;
                 }
 
                 const planet = new THREE.Mesh(new THREE.SphereGeometry(data.radius, 32, 32), material);
@@ -2067,6 +2170,11 @@
                         moonMesh.position.x = moonData.distance;
                         moonOrbitPivot.add(moonMesh);
                         otherMoons.push({ mesh: moonMesh, pivot: moonOrbitPivot, speed: moonData.speed, data: moonData, parentPlanet: planet });
+
+                        // --- NEU: Monde in Jupiters Liste eintragen ---
+                        if (data.name === 'Jupiter') {
+                            jupiterMoons.push(moonMesh);
+                        }
                         
                         const moonInfo = { ...moonData };
                         delete moonInfo.name; delete moonInfo.radius; delete moonInfo.distance; delete moonInfo.speed; delete moonInfo.texture; delete moonInfo.inclination;
@@ -2081,7 +2189,7 @@
         }
 
         function createOrbits() {
-            const createEllipticalOrbitLine = (a, e, perihelionAngle, color, segments = 256) => {
+            const createEllipticalOrbitLine = (a, e, perihelionAngle, color, segments = 1024) => {
                 const points = [];
                 for (let i = 0; i <= segments; i++) {
                     const nu = (i / segments) * Math.PI * 2;
@@ -2095,7 +2203,7 @@
                 return new THREE.Line(new THREE.BufferGeometry().setFromPoints(points), new THREE.LineBasicMaterial({ color: color }));
             };
 
-            const createCircleOrbit = (radius, color, segments = 128) => {
+            const createCircleOrbit = (radius, color, segments = 512) => {
                  const points = [];
                  for (let i = 0; i <= segments; i++) {
                      const angle = (i / segments) * Math.PI * 2;
@@ -2117,6 +2225,37 @@
                 scene.add(orbitLine);
                 otherPlanetOrbits.push(orbitLine);
             });
+            // --- NEU: Ekliptik-Flächen erstellen ---
+            // Erde (Blau)
+            const earthPlaneGeo = new THREE.CircleGeometry(EARTH_DISTANCE, 512);
+            earthPlaneGeo.rotateX(-Math.PI / 2); // Flach auf die XZ-Ebene legen
+            const earthPlaneMat = new THREE.MeshBasicMaterial({
+                color: 0x00aaff, // Hellblau
+                transparent: true,
+                opacity: 0.15,
+                side: THREE.DoubleSide
+            });
+            earthEclipticPlane = new THREE.Mesh(earthPlaneGeo, earthPlaneMat);
+            earthEclipticPlane.visible = false; // Standardmässig aus
+            scene.add(earthEclipticPlane);
+
+            // Mond (Gelb)
+            const moonPlaneGeo = new THREE.CircleGeometry(MOON_DISTANCE, 256);
+            moonPlaneGeo.rotateX(-Math.PI / 2); // Flach auf die XZ-Ebene legen
+            const moonPlaneMat = new THREE.MeshBasicMaterial({
+                color: 0xffff99, // Hellgelb
+                transparent: true,
+                opacity: 0.2,
+                side: THREE.DoubleSide
+            });
+            moonEclipticPlane = new THREE.Mesh(moonPlaneGeo, moonPlaneMat);
+            
+            // WICHTIG: Die Neigung der Mondbahn anwenden
+            moonEclipticPlane.rotation.x = MOON_TILT_RAD; 
+            
+            moonEclipticPlane.visible = false; // Standardmässig aus
+            scene.add(moonEclipticPlane);
+            // --- Ende NEU ---
         }
 
         function setupUI() {
@@ -2148,6 +2287,18 @@
                 earthEquatorLine.visible = equatorCheckbox.checked;
             }
 // --- Ende NEU ---
+
+            // --- NEU: Listener für Ekliptik-Flächen ---
+            eclipticPlaneCheckbox = document.getElementById('ecliptic-plane-checkbox');
+            eclipticPlaneCheckbox.addEventListener('change', (e) => {
+                const isChecked = e.target.checked;
+                if (earthEclipticPlane) earthEclipticPlane.visible = isChecked;
+                if (moonEclipticPlane) moonEclipticPlane.visible = isChecked;
+            });
+            // Initialen Status setzen
+            if (earthEclipticPlane) earthEclipticPlane.visible = eclipticPlaneCheckbox.checked;
+            if (moonEclipticPlane) moonEclipticPlane.visible = eclipticPlaneCheckbox.checked;
+            // --- Ende NEU ---
 
             planetsVisibleCheckbox.addEventListener('change', (e) => {
                 const isVisible = e.target.checked;
@@ -2382,7 +2533,15 @@
 
             // --- UFO Dialog Listener ---
             document.getElementById('ufo-yes-btn').addEventListener('click', () => {
-                document.getElementById('ufo-dialog-text').textContent = "Perfekt. Danke für die Hilfe.";
+                
+                // --- NEU: Logik basierend auf Zähler ---
+                if (ufoEncounterCount === 0) {
+                    document.getElementById('ufo-dialog-text').textContent = "Perfekt. Danke für die Hilfe.";
+                } else if (ufoEncounterCount === 1) {
+                    document.getElementById('ufo-dialog-text').textContent = "Gut wir geben unser Bestes. Wir melden uns, mit weiteren Infos! *zwoop*";
+                }
+                // --- ENDE NEU ---
+
                 document.getElementById('ufo-initial-buttons').style.display = 'none';
                 const closeGroup = document.getElementById('ufo-close-group');
                 closeGroup.style.display = 'flex';
@@ -2391,14 +2550,29 @@
                 closeBtn.onclick = () => {
                      document.getElementById('ufo-dialog').style.display = 'none';
                      ufoState = 'leaving';
-                     ufoDepartureTarget = earth; 
-                     cameraFocus = 'ufo_to_earth'; 
+                     
+                     // --- NEU: Ziel anpassen & Zähler erhöhen ---
+                     // Nur beim ersten Mal zur Erde fliegen
+                     ufoDepartureTarget = (ufoEncounterCount === 0) ? earth : null; 
+                     cameraFocus = (ufoEncounterCount === 0) ? 'ufo_to_earth' : ufo;
                      if (!isPlaying) togglePlay();
+                     
+                     ufoEncounterCount++; // Zähler erhöhen
+                     resetUfoDialog(); // Buttons zurücksetzen
+                     // --- ENDE NEU ---
                 };
             });
 
             document.getElementById('ufo-no-btn').addEventListener('click', () => {
-                document.getElementById('ufo-dialog-text').textContent = "Schade. Dann suchen wir weiter. Gute Reise, Erdling.";
+                
+                // --- NEU: Logik basierend auf Zähler ---
+                if (ufoEncounterCount === 0) {
+                    document.getElementById('ufo-dialog-text').textContent = "Schade. Dann suchen wir weiter. Gute Reise, Erdling.";
+                } else if (ufoEncounterCount === 1) {
+                    document.getElementById('ufo-dialog-text').textContent = "Na gut, dann nicht. Wir suchen weiter nach Herrn Maurer.";
+                }
+                // --- ENDE NEU ---
+
                 document.getElementById('ufo-initial-buttons').style.display = 'none';
                 const closeGroup = document.getElementById('ufo-close-group');
                 closeGroup.style.display = 'flex';
@@ -2416,9 +2590,13 @@
                      );
                      cameraFocus = ufo; 
                      if (!isPlaying) togglePlay();
+                     
+                     // --- NEU: Zähler erhöhen ---
+                     ufoEncounterCount++; // Zähler erhöhen
+                     resetUfoDialog(); // Buttons zurücksetzen
+                     // --- ENDE NEU ---
                 };
             });
-            // --------------------------------
             
             // --- NEU: Jahreszeiten-Listener (überarbeitet) ---
             const SEASON_SPRING_DAY = 274.19;  // Frühlingsäquinoktium (ca. 20. März)
@@ -2523,6 +2701,12 @@
 
         function updateUFO(deltaTime) {
             if (ufoState === 'inactive') {
+
+                // Prüfen, ob die Story vorbei ist.
+                // ufoEncounterCount wird NACH der 3. Begegnung (Index 2) auf 3 gesetzt.
+                if (ufoEncounterCount >= 3) {
+                    return; // Timer nicht mehr starten, nicht mehr spawnen.
+                }
                 ufoSpawnTimer -= deltaTime;
                 if (ufoSpawnTimer <= 0) {
                     spawnUFO();
@@ -2612,11 +2796,73 @@
         }
 
         function resetUfoDialog() {
-            document.getElementById('ufo-dialog-text').textContent = "Bist du von der Klasse 6b? Wir sind auf dem Weg zur Erde, um Herr Maurer zu entführen. Weißt du wo das ist?";
+            // --- NEU: Setzt nur die Buttons zurück ---
             document.getElementById('ufo-initial-buttons').style.display = 'flex';
             document.getElementById('ufo-close-group').style.display = 'none';
+
+            // Button-Texte auf Standard zurücksetzen (für Begegnung 0 und 1)
+            document.getElementById('ufo-yes-btn').textContent = "Ja, dort lang! 👉";
+            document.getElementById('ufo-no-btn').textContent = "Keine Ahnung 🤷‍♂️";
+            document.getElementById('ufo-close-btn').textContent = "Kommunikation beenden";
+            // --- ENDE NEU ---
         }
-        // ---------------------------
+        
+        // --- NEU: Setzt den Dialogtext basierend auf dem Zähler ---
+        function setupUfoDialogText() {
+            const dialog = document.getElementById('ufo-dialog');
+            const titleEl = dialog.querySelector('h3');
+            const textEl = document.getElementById('ufo-dialog-text');
+            const initialButtons = document.getElementById('ufo-initial-buttons');
+            const closeGroup = document.getElementById('ufo-close-group');
+            const closeBtn = document.getElementById('ufo-close-btn');
+
+            if (ufoEncounterCount === 0) {
+                // Begegnung 1: Die ursprüngliche Nachricht
+                titleEl.textContent = "🛸 Unbekanntes Flugobjekt";
+                textEl.textContent = "Bist du in der Klasse von Herrn Lehmann? Wir sind auf dem Weg zur Erde, um Herrn Maurer zu entführen. Er hat wichtige Informationen über das Universum, die wir brauchen. Weisst du wo er ist?";
+                
+                // Sicherstellen, dass die richtigen Buttons sichtbar sind
+                initialButtons.style.display = 'flex';
+                closeGroup.style.display = 'none';
+                
+            } else if (ufoEncounterCount === 1) {
+                // Begegnung 2: Eine neue Nachricht
+                titleEl.textContent = "🛸 Signal [Priorität Rot]";
+                textEl.textContent = "Wir sind es nochmal! Wir konnten Herrn Maurer nicht festnehmen, Er hatte einen Gehilfen namens Bursatsch oder so ähnlich. Wir hatten keine Chance gegen die Zwei. Wir sehen auf unserem Radar, dass ein feindliches Spaceship auf dem Weg zur Erde ist, um diese zu zerstören. Sollen wir das Problem für euch beseitigen?";
+                
+                // Button-Texte anpassen
+                document.getElementById('ufo-yes-btn').textContent = "Ja, gerne! ☄️";
+                document.getElementById('ufo-no-btn').textContent = "Nein, ist egal! 😟";
+
+                initialButtons.style.display = 'flex';
+                closeGroup.style.display = 'none';
+                
+            } else {
+                // Begegnung 3 (und alle weiteren)
+                titleEl.textContent = "🛸 [Übertragung gestört]";
+                textEl.textContent = "Verbindung instabil... *kzzrt* ... Herr Maurer ist... *bzzzt* ... in Gewahrsam. Mission ... *krrk* ... erfolgreich. Danke für die ... *rausch* ... Kooperation. Das Spaceship ... *bzzz* ... ist jetzt euer Probl ... *Klick* ...";
+                
+                // Nur den "Schliessen"-Button anzeigen
+                initialButtons.style.display = 'none';
+                closeGroup.style.display = 'flex';
+                closeBtn.textContent = "Verbindung verloren...";
+
+                // Eigene Klick-Logik für diesen "End-Dialog"
+                closeBtn.onclick = () => {
+                     document.getElementById('ufo-dialog').style.display = 'none';
+                     ufoState = 'leaving';
+                     ufoDepartureTarget = null; 
+                     ufoLeaveTimer = 0; 
+                     ufoTargetPos.set( (Math.random() - 0.5) * 20000, (Math.random() - 0.5) * 20000, (Math.random() - 0.5) * 20000 );
+                     cameraFocus = ufo; 
+                     if (!isPlaying) togglePlay();
+                     
+                     ufoEncounterCount++; // Zähler erhöhen
+                     resetUfoDialog(); // Buttons für das nächste Mal zurücksetzen
+                };
+            }
+        }
+        // --- ENDE NEU ---
         
         function flyTo(endPos, endTarget, duration = 1.0, newFocusTarget = null, callback = null) {
             isUserControllingCamera = false;
@@ -2975,7 +3221,9 @@
             isDemoActive = false;
             demoType = '';
             controls.enableZoom = true;
-            demoButtons.style.display = 'flex';
+            if (!isRealScaleActive) {
+                demoButtons.style.display = 'flex';
+            }
             demoControlButtons.style.display = 'none';
             demoSpeedControl.style.display = 'none';
             earthTiltPivot.rotation.z = EARTH_TILT_RAD;
@@ -3008,6 +3256,10 @@
             demoButtons.style.display = 'none'; 
             demoControlButtons.style.display = 'flex'; 
             demoSpeedControl.style.display = 'block'; 
+            // --- NEU: Flächen ausblenden ---
+            if (earthEclipticPlane) earthEclipticPlane.visible = false;
+            if (moonEclipticPlane) moonEclipticPlane.visible = false;
+            // --- Ende NEU ---
             
             if (type === 'sofi') {
                 earthTiltPivot.rotation.z = EARTH_TILT_RAD;
@@ -3070,6 +3322,13 @@
             resetToRealMode();
             toggleOtherPlanets(true);  // Stellt Planeten gem. Checkbox wieder her
             restoreOrbitLines();       // Stellt Erd/Mond-Bahnen gem. Checkbox wieder her
+            // --- NEU: Flächen wiederherstellen (gem. Checkbox) ---
+            if (eclipticPlaneCheckbox) {
+                const isChecked = eclipticPlaneCheckbox.checked;
+                if (earthEclipticPlane) earthEclipticPlane.visible = isChecked;
+                if (moonEclipticPlane) moonEclipticPlane.visible = isChecked;
+            }
+        // --- Ende NEU ---
             currentDay = 0; 
             if (currentDayLabelEl) currentDayLabelEl.textContent = formatDayCount(currentDay);
             const daySlider = document.getElementById('day-slider');
@@ -3123,6 +3382,10 @@
             setRealScaleUiVisibility(false);
             earthOrbitLine.visible = false;
             moonOrbitLine.visible = false;
+            // --- NEU: Flächen ausblenden ---
+            if (earthEclipticPlane) earthEclipticPlane.visible = false;
+            if (moonEclipticPlane) moonEclipticPlane.visible = false;
+            // --- Ende NEU ---
             otherPlanetOrbits.forEach(o => o.visible = false);
 
             otherMoons.forEach(moonObj => { moonObj.mesh.visible = false; });
@@ -3147,6 +3410,7 @@
             // Kamera-Sichtweite erhöhen
             camera.far = 5000000; 
             camera.updateProjectionMatrix();
+            controls.maxDistance = 5000000;
 
             targetSunScale = 1.0; 
             targetEarthDistance = COMPARE_EARTH_DIST_VALUE;
@@ -3233,6 +3497,13 @@
             
             earthOrbitLine.visible = orbitCheckbox.checked;
             moonOrbitLine.visible = orbitCheckbox.checked;
+            // --- NEU: Flächen wiederherstellen (gem. Checkbox) ---
+            if (eclipticPlaneCheckbox) {
+                const isChecked = eclipticPlaneCheckbox.checked;
+                if (earthEclipticPlane) earthEclipticPlane.visible = isChecked;
+                if (moonEclipticPlane) moonEclipticPlane.visible = isChecked;
+            }
+            // --- Ende NEU ---
             otherPlanetOrbits.forEach(o => o.visible = planetsOrbitCheckbox.checked);
 
             otherMoons.forEach(moonObj => { moonObj.mesh.visible = true; });
@@ -3250,8 +3521,9 @@
 
             setTimeout(() => {
                 if (!isRealScaleActive) {
-                     camera.far = 8000; 
+                     camera.far = 20000; 
                      camera.updateProjectionMatrix();
+                     controls.maxDistance = 7000;
                 }
             }, 500);
 
@@ -3264,6 +3536,14 @@
         function setRealScaleUiVisibility(visible) {
             const displayStyle = visible ? '' : 'none';
             const flexStyle = visible ? 'flex' : 'none';
+
+            // Neue Zeile, um die Ekliptik-Checkbox zu finden und zu steuern
+            const eclipticPlaneLabel = document.getElementById('ecliptic-plane-checkbox');
+            if (eclipticPlaneLabel) {
+                // Wir blenden das übergeordnete <label>-Element aus (das 'display: flex' hat)
+                eclipticPlaneLabel.parentElement.style.display = flexStyle;
+            }
+            // --- (ENDE) ---
 
             document.getElementById('focus-ecliptic').style.display = displayStyle;
             
@@ -3394,6 +3674,8 @@
                 
                 planetButtons.style.display = 'none';
 
+                document.getElementById('moon-phases-group').style.display = 'block';
+
                 createGrid(); 
                 rulerFadeTimer = 0;
 
@@ -3407,6 +3689,7 @@
                 distBtn.textContent = "🚀 Reale Distanz";
                 distBtn.classList.remove('btn-warning');
                 distBtn.classList.add('btn-secondary');
+                document.getElementById('moon-phases-group').style.display = 'none';
 
                 if (rulerGroup) {
                     scene.remove(rulerGroup);
@@ -3427,7 +3710,9 @@
             // --- NEU: Indikatoren zurücksetzen ---
             resetActiveIndicators();
             
-            restoreOrbitLines();
+            if (!isRealScaleActive) {
+                restoreOrbitLines();
+            }
             // NEU: Planeten ausblenden, da der Fokus auf dem Mondzyklus liegt
             toggleOtherPlanets(false);
             
@@ -3794,6 +4079,9 @@ function jumpToSeason(day, clickedBtn) {
             moonPivot.position.copy(earthWorldPos);
             moonPivot.rotation.y = earthOrbitAngle + moonOrbitAngle; 
             moonOrbitLine.position.copy(earthWorldPos);
+            // --- NEU: Position der Mond-Ekliptik-Fläche aktualisieren ---
+            if (moonEclipticPlane) moonEclipticPlane.position.copy(earthWorldPos);
+            // --- Ende NEU ---
             moon.rotation.y = 0;
             moon.position.x = -currentMoonDistance; 
 
@@ -3842,6 +4130,24 @@ function jumpToSeason(day, clickedBtn) {
                 moonObj.parentPlanet.getWorldPosition(tempParentPos);
                 moonObj.mesh.material.uniforms.uParentPosition.value.copy(tempParentPos);
             });
+
+            /* --- NEU: Jupiter-Mondschatten-Uniforms aktualisieren --- */
+            if (jupiterMoonShadowUniforms && jupiterMoons.length > 0) {
+                let tempMoonPos = new THREE.Vector3();
+                for (let i = 0; i < 4; i++) {
+                    if (jupiterMoons[i]) {
+                        // 1. Weltposition des Mondes holen
+                        jupiterMoons[i].getWorldPosition(tempMoonPos);
+                        // 2. Position in den Shader-Uniforms aktualisieren
+                        jupiterMoonShadowUniforms.uMoonPositions.value[i].copy(tempMoonPos);
+                        // 3. Radius des Mondes aktualisieren
+                        jupiterMoonShadowUniforms.uMoonRadii.value[i] = jupiterMoons[i].geometry.parameters.radius;
+                    } else {
+                        // Falls es (noch) keinen Mond an diesem Index gibt, Radius auf 0
+                        jupiterMoonShadowUniforms.uMoonRadii.value[i] = 0.0;
+                    }
+                }
+            }
 
             let tempVec = new THREE.Vector3();
             earth.getWorldPosition(tempVec);
@@ -4139,6 +4445,9 @@ function jumpToSeason(day, clickedBtn) {
 
                 if (clickedObject.userData.isUFO && ufoState === 'hovering') { 
                     ufoState = 'interacted';
+                    // --- NEU: Text basierend auf Zähler setzen ---
+                    setupUfoDialogText();
+
                     document.getElementById('ufo-dialog').style.display = 'block';
                     if (isPlaying) pauseSimulation();
                     return true;
