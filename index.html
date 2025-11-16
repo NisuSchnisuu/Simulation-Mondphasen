@@ -65,7 +65,7 @@
             flex-shrink: 0; /* Verhindert, dass dieser Bereich schrumpft */
             padding-bottom: 15px;
             margin-bottom: 15px;
-            border-bottom: 1px solid #444; /* Klare Trennlinie */
+            border-bottom: 2px solid #777; /* KORREKTUR: Klarere Trennlinie */
         }
 
         /* Der scrollbare Inhalts-Bereich */
@@ -723,11 +723,12 @@
                     <label for="day-slider">Zeitsteuerung (1. Jahr): <span id="current-day-label" style="font-weight: bold; color: #ffc107;">0.0</span></label>
                     <input type="range" id="day-slider" min="0" max="365" value="0" step="0.1">
                     
-                    <label for="speed-slider" style="margin-top: 10px;">Geschwindigkeit: <span id="speed-label"></span></label>
-                    <input type="range" id="speed-slider" min="0" max="100" value="10" step="1">
-                    <label for="darkness-slider" style="margin-top: 10px;">Helligkeit (Nachtseite): <span id="darkness-label">0.30</span></label>
-                    <input type="range" id="darkness-slider" min="0" max="0.9" value="0.3" step="0.01">
-                    </div> </div> </div>
+                    <label for="speed-slider" style="margin-top: 5px;">Geschwindigkeit: <span id="speed-label"></span></label> <input type="range" id="speed-slider" min="0" max="100" value="10" step="1">
+                </div>
+                
+                <label for="darkness-slider" style="margin-top: 5px;">Helligkeit (Nachtseite): <span id="darkness-label">0.30</span></label> <input type="range" id="darkness-slider" min="0" max="0.9" value="0.3" step="0.01">
+                </div> 
+        </div>
                 
         <div id="ui-scrollable-content">
             
@@ -907,6 +908,8 @@
         let loaded3DModels = []; // Ein Array, das alle unsere Modelle aufnimmt
         let humanObjectsCheckbox;  
         let cometModelTemplate = null;
+        let cometRockTexture;
+        let ufoModelTemplate = null;
 
         //Ecliptic-Plane
         let earthEclipticPlane, moonEclipticPlane;
@@ -1034,6 +1037,8 @@
             LUNAR_MONTH_DAYS * 0.875  + PHASE_OFFSET_DAYS  
         ];
 
+        const COMET_FOCUS_DISTANCE = 40.0;
+
         let isUserControllingCamera = false;
         let currentSelectedInfo = null;
         let infoToastButton;
@@ -1073,7 +1078,7 @@
                 this.group = new THREE.Group(); 
                 scene.add(this.group);
 
-                this.radius = THREE.MathUtils.randFloat(0.8 * SCENE_SCALE, 1.2 * SCENE_SCALE);
+                this.radius = THREE.MathUtils.randFloat(0.1 * SCENE_SCALE, 0.3 * SCENE_SCALE);
                 this.baseSpeed = THREE.MathUtils.randFloat(6.0 * SCENE_SCALE, 10.0 * SCENE_SCALE); 
                 
                 const colorVariant = Math.random();
@@ -1095,6 +1100,12 @@
                         if (child.isMesh && !this.material) {
                             // Klonen, damit jeder Komet ein einzigartiges Material für die Glow-Animation hat
                             this.material = child.material.clone(); 
+                            // Weise unsere manuell geladene Textur zu
+                            if (cometRockTexture) {
+                                this.material.map = cometRockTexture;
+                            }
+                            // Setze die Grundfarbe auf Weiss, damit die Textur nicht verfälscht wird
+                            this.material.color = new THREE.Color(0xffffff);
                             child.material = this.material;
                         }
                     });
@@ -2119,8 +2130,10 @@
         function createSolarSystem() {
             const textureLoader = new THREE.TextureLoader(loadingManager);
 
+            cometRockTexture = textureLoader.load('ImagesGit/Objects/comet_ice.webp');
+
             const starGeometry = new THREE.SphereGeometry(5000, 32, 32); 
-            const starTexture = textureLoader.load('https://cdn.jsdelivr.net/gh/NisuSchnisuu/Simulation-Mondphasen@main/ImagesGit/Scenery/8k_stars_milky_way.webp');
+            const starTexture = textureLoader.load('ImagesGit/Scenery/8k_stars_milky_way.webp');
             const starMaterial = new THREE.MeshBasicMaterial({ map: starTexture, side: THREE.BackSide });
             starField = new THREE.Mesh(starGeometry, starMaterial);
             scene.add(starField);
@@ -2367,21 +2380,41 @@
             const modelsToLoad = [
                 {
                     id: 'comet',
-                    // ❗ ERSETZE DIES mit dem Link zu deinem Kometen-Modell!
-                    url: 'ImagesGit/3D-Models/esa_rosetta_comet_c.glb',
+                    url: 'ImagesGit/3D-Models/comet_ice.glb',
                     type: 'template' // Ein Schalter, damit wir wissen, dass dies eine Vorlage ist
                 },
+
+                {
+                    id: 'ufo',
+                    url: 'ImagesGit/3D-Models/ufo.glb', 
+                    type: 'template'
+                },
+
                 {
                     id: 'iss',
                     url: 'ImagesGit/3D-Models/iss-mid_c.glb',
                     label: 'ISS',
-                    scale: 1, // Sehr klein, wie gewünscht
+                    scale: 1.3, // Sehr klein, wie gewünscht
                     orbitTarget: 'earth', // (Reserviert für später)
                     altitude: EARTH_RADIUS + 0.5, // 0.5 Einheiten über der Erde
                     inclination: 51.6, // Grad
                     orbitsPerDay: 15.6, // Umkreisungen pro Tag
                     updateType: 'earth_orbit', // Logik-Schalter für updatePositions
                     focusDistance: 0.4
+                },
+
+                {
+                    id: 'hubble',
+                    // WICHTIG: Du musst ein 3D-Modell (z.B. hubble.glb) 
+                    // in deinen 'ImagesGit/3D-Models/' Ordner hochladen.
+                    url: 'ImagesGit/3D-Models/hubble_telescope-v1.glb', // Pfad anpassen!
+                    label: 'Hubble', // Für den Fokus-Button
+                    scale: 0.00001, // Ggfs. anpassen, damit es kleiner als die ISS ist
+                    altitude: EARTH_RADIUS + 1.0, // ~540 km (etwas höher als ISS)
+                    inclination: 28.5, // Andere Bahnebene als die ISS
+                    orbitsPerDay: 15.2, // Etwas langsamer als die ISS
+                    updateType: 'earth_orbit', // Nutzt die gleiche Orbit-Logik
+                    focusDistance: 0.2 // Etwas näher ranzoomen als bei der ISS
                 }
                 // HIER KÖNNTEST DU EINFACH MEHR OBJEKTE HINZUFÜGEN
                 // { id: 'hubble', url: 'hubble.glb', ... }
@@ -2406,6 +2439,12 @@
                             cometModelTemplate = gltf.scene;
                             console.log("3D-Modell-Vorlage 'Komet' erfolgreich geladen.");
                         }
+
+                        else if (modelData.id === 'ufo') {
+                            ufoModelTemplate = gltf.scene;
+                            console.log("3D-Modell-Vorlage 'UFO' erfolgreich geladen.");
+                        }
+
                         // Wichtig: 'return' beendet die Funktion für DIESES Modell hier.
                         // Es wird nicht zur Szene hinzugefügt oder im Array gespeichert.
                         return; 
@@ -2417,7 +2456,63 @@
                     
                     // Skalierung anwenden
                     modelScene.scale.set(modelData.scale, modelData.scale, modelData.scale);
+                    
+                    if (modelData.id === 'iss') {
+                        // Rotiere das Modell um 90 Grad (PI/2 Radianten) um seine "Hoch"-Achse (Y).
+                        // Dies richtet die "Nase" des Modells in die Bewegungsrichtung aus.
+                        // Falls es immer noch falsch ist, versuche -(Math.PI / 2)
+                        // oder probiere modelScene.rotation.x = Math.PI / 2;
+                        modelScene.rotation.z = -(Math.PI / 2); 
+                    }
 
+                    if (modelData.id === 'hubble') {
+                        modelScene.rotation.z = -(Math.PI / 1.2); 
+                    }
+
+                    // --- START: NEUER CODE FÜR ISS-INFO ---
+                    if (modelData.id === 'iss') {
+                        
+                        // 1. Info-Objekt definieren
+                        // Wir verwenden Felder wieder, die 'showInfoPopup' schon kennt.
+                        modelScene.userData.info = {
+                            name: 'ISS (Internationale Raumstation)',
+                            earthCompareRadius: 'ca. 109m Spannweite', // Wird als "Größe" angezeigt
+                            radius_km: 'ca. 400 km', // "missbrauchen" wir für die Flughöhe
+                            umlaufzeit: 'ca. 90 Minuten', // "missbrauchen" wir für die Umlaufzeit
+                            taglaenge: '16 pro Tag', // "missbrauchen" wir für Sonnenaufgänge
+                            parentName: 'Erde', // Wichtig für Schritt 2
+                            funFacts: [
+                                'Die ISS umkreist die Erde mit ca. 28.000 km/h.',
+                                'Sie ist das größte künstliche Objekt im Erdorbit.',
+                                'Astronauten an Bord erleben 16 Sonnenauf- und -untergänge pro Tag.'
+                            ]
+                        };
+
+                        // 2. Objekt zur globalen Klick-Liste hinzufügen
+                        clickableObjects.push(modelScene);
+                    }
+
+                    // --- Hubble-Info-Daten ---
+                    if (modelData.id === 'hubble') {
+                        
+                        // 1. Info-Objekt definieren
+                        modelScene.userData.info = {
+                            name: 'Hubble-Weltraumteleskop (HST)',
+                            earthCompareRadius: 'ca. 13,2m lang', // "Größe"
+                            radius_km: 'ca. 540 km', // "Flughöhe"
+                            umlaufzeit: 'ca. 95 Minuten', 
+                            taglaenge: '15.2 pro Tag', // "Sonnenaufgänge"
+                            parentName: 'Erde',
+                            funFacts: [
+                                'Startete 1990 und hat unser Bild vom Universum revolutioniert.',
+                                'Fliegt außerhalb der Erdatmosphäre für gestochen scharfe Bilder.',
+                                'Hat die berühmten "Deep Fields" mit Tausenden Galaxien fotografiert.'
+                            ]
+                        };
+
+                        // 2. Objekt zur globalen Klick-Liste hinzufügen
+                        clickableObjects.push(modelScene);
+                    }
                     // Erstelle den Pivot-Punkt (den Rotations-Anker)
                     // Dieser Pivot wird an der Position der Erde sein
                     const pivot = new THREE.Group();
@@ -2983,23 +3078,53 @@
 
 
         // --- UFO Funktionen ---
+        // --- NEUE createUFO() FUNKTION ---
         function createUFO() {
-            const ufoGroup = new THREE.Group();
-            const saucerGeo = new THREE.CylinderGeometry(0.5 * SCENE_SCALE, 1.5 * SCENE_SCALE, 0.3 * SCENE_SCALE, 16);
-            const saucerMat = new THREE.MeshStandardMaterial({ color: 0x888888, emissive: 0x444444, metalness: 0.8, roughness: 0.2 });
-            const saucer = new THREE.Mesh(saucerGeo, saucerMat);
-            ufoGroup.add(saucer);
-            const cockpitGeo = new THREE.SphereGeometry(0.6 * SCENE_SCALE, 16, 16, 0, Math.PI * 2, 0, Math.PI * 0.5);
-            const cockpitMat = new THREE.MeshStandardMaterial({ color: 0x00ffff, emissive: 0x00aaaa, metalness: 0.5, roughness: 0.1, transparent: true, opacity: 0.8 });
-            const cockpit = new THREE.Mesh(cockpitGeo, cockpitMat);
-            cockpit.position.y = 0.15 * SCENE_SCALE; 
-            ufoGroup.add(cockpit);
+            if (ufoModelTemplate) {
+                // --- 1. 3D-Modell-Version ---
+                ufo = ufoModelTemplate.clone();
+                
+                // ❗ WICHTIG: Skalierung anpassen!
+                // Das alte UFO war ca. 3 Einheiten breit (Radius 1.5 * 2).
+                // Wir skalieren das neue Modell auf diese Grösse.
+                const ufoTargetWidth = 10.0 * SCENE_SCALE;
+                
+                try {
+                    // Automatische Skalierung basierend auf der Modellgrösse
+                    const box = new THREE.Box3().setFromObject(ufo);
+                    const size = box.getSize(new THREE.Vector3());
+                    const maxDim = Math.max(size.x, size.y, size.z);
+                    const scaleFactor = ufoTargetWidth / maxDim;
+                    ufo.scale.set(scaleFactor, scaleFactor, scaleFactor);
+                } catch (e) {
+                    // Fallback, falls die Box-Berechnung fehlschlägt
+                    ufo.scale.set(1.0, 1.0, 1.0); 
+                    console.error("Konnte UFO-Grösse nicht automatisch anpassen:", e);
+                }
 
-            ufo = ufoGroup;
+            } else {
+                // --- 2. Fallback-Version (Dein alter Code) ---
+                // (Falls das 3D-Modell nicht geladen werden konnte)
+                console.warn("UFO-Modell nicht geladen, verwende Fallback-Geometrie.");
+                const ufoGroup = new THREE.Group();
+                const saucerGeo = new THREE.CylinderGeometry(0.5 * SCENE_SCALE, 1.5 * SCENE_SCALE, 0.3 * SCENE_SCALE, 16);
+                const saucerMat = new THREE.MeshStandardMaterial({ color: 0x888888, emissive: 0x444444, metalness: 0.8, roughness: 0.2 });
+                const saucer = new THREE.Mesh(saucerGeo, saucerMat);
+                ufoGroup.add(saucer);
+                const cockpitGeo = new THREE.SphereGeometry(0.6 * SCENE_SCALE, 16, 16, 0, Math.PI * 2, 0, Math.PI * 0.5);
+                const cockpitMat = new THREE.MeshStandardMaterial({ color: 0x00ffff, emissive: 0x00aaaa, metalness: 0.5, roughness: 0.1, transparent: true, opacity: 0.8 });
+                const cockpit = new THREE.Mesh(cockpitGeo, cockpitMat);
+                cockpit.position.y = 0.15 * SCENE_SCALE; 
+                ufoGroup.add(cockpit);
+                ufo = ufoGroup;
+            }
+
+            // --- 3. Gemeinsame Logik (unverändert) ---
             ufo.userData.isUFO = true; 
             clickableObjects.push(ufo);
             scene.add(ufo);
         }
+        // --- ENDE NEUE FUNKTION ---
 
         function spawnUFO() {
             if (!ufo) createUFO();
@@ -3155,7 +3280,7 @@
             } else if (ufoEncounterCount === 1) {
                 // Begegnung 2: Eine neue Nachricht
                 titleEl.textContent = "🛸 Signal [Priorität Rot]";
-                textEl.textContent = "Wir sind es nochmal! Wir konnten Herrn Maurer nicht festnehmen, Er hatte einen Gehilfen namens Bursatsch oder so ähnlich. Wir hatten keine Chance gegen die Zwei. Wir sehen auf unserem Radar, dass ein feindliches Spaceship auf dem Weg zur Erde ist, um diese zu zerstören. Sollen wir das Problem für euch beseitigen?";
+                textEl.textContent = "Wir sind es nochmal! Wir konnten Herrn Maurer nicht festnehmen, Er hatte einen Gehilfen namens Bursatsch oder so ähnlich. Wir hatten keine Chance gegen die Zwei. Ausserdem sehen wir auf unserem Radar, dass ein feindliches Raumschiff auf dem Weg zur Erde ist, um diese zu zerstören. Sollen wir das Problem für euch beseitigen?";
                 
                 // Button-Texte anpassen
                 document.getElementById('ufo-yes-btn').textContent = "Ja, gerne! ☄️";
@@ -3460,16 +3585,22 @@
             const endTarget = targetPos.clone();
             let distance; // 'const' zu 'let' geändert, damit wir sie überschreiben können
 
-            // --- NEU: Prüfen, ob es ein 3D-Modell mit fixer Distanz ist ---
-            const modelEntry = loaded3DModels.find(m => m.scene === targetObj);
-            
-            if (modelEntry && modelEntry.data.focusDistance) {
-                // Ja, nimm die fixe Distanz aus der Konfiguration (Schritt 1)
-                distance = modelEntry.data.focusDistance;
+            if (comet && targetObj === comet.mesh) {
+                // Wenn der Komet fokussiert wird: Nutze die fixe Distanz
+                distance = COMET_FOCUS_DISTANCE;
             } else {
-                // Nein, berechne die Distanz wie bisher (für Planeten/Sonne)
-                const fovInRad = THREE.MathUtils.degToRad(camera.fov);
-                distance = (radius / 0.3) / Math.tan(fovInRad / 2); 
+                // Sonst: Nutze die Logik von 3D-Modellen (ISS) oder die automatische Berechnung (Planeten)
+                
+                const modelEntry = loaded3DModels.find(m => m.scene === targetObj);
+                
+                if (modelEntry && modelEntry.data.focusDistance) {
+                    // 1. NEU: Fixe Distanz von 3D-Modell (z.B. ISS)
+                    distance = modelEntry.data.focusDistance;
+                } else {
+                    // 2. Fallback: Automatische Berechnung (Sonne/Planet)
+                    const fovInRad = THREE.MathUtils.degToRad(camera.fov);
+                    distance = (radius / 0.3) / Math.tan(fovInRad / 2); 
+                }
             }
             
 
@@ -3490,6 +3621,7 @@
             }
             controls.enableZoom = true;
         }
+        
 
         // --- NEU: Funktionen zur Steuerung der Frequenz-Demo ---
         
@@ -3726,10 +3858,14 @@
             document.getElementById('real-scale-controls').prepend(planetButtons); // Verschiebt das Element
             planetButtons.style.display = 'flex'; // Sicherstellen, dass es sichtbar ist
             planetButtons.style.marginTop = '0px'; // Margin zurücksetzen
+            
+            // KORREKTUR 4: Trennlinien und Border entfernen
+            planetButtons.style.borderTop = 'none';
+            planetButtons.style.paddingTop = '0px';
 
-            // Trennlinien anzeigen
-            document.getElementById('real-scale-sep1').style.display = 'block';
-            document.getElementById('real-scale-sep2').style.display = 'block';
+            // KORREKTUR 4: Trennlinien ausblenden
+            document.getElementById('real-scale-sep1').style.display = 'none';
+            document.getElementById('real-scale-sep2').style.display = 'none';
 
             infoBox.textContent = "MAẞSTAB: Kamera fliegt zur Position für Grössenvergleich...";
 
@@ -3837,10 +3973,20 @@
             }
 
             const planetButtons = document.getElementById('planet-focus-buttons');
-            const cameraGroup = document.querySelectorAll('.control-group')[1]; 
-            cameraGroup.appendChild(planetButtons); 
+            // KORREKTUR 2: Ziel-Container für Buttons korrigiert
+            const cameraGroup = document.querySelectorAll('#ui-scrollable-content .control-group')[1]; 
+            const moonContainer = document.getElementById('moon-focus-container');
+            
+            // KORREKTUR 2: insertBefore statt appendChild
+            cameraGroup.insertBefore(planetButtons, moonContainer); 
+            
             planetButtons.style.display = planetsVisibleCheckbox.checked ? 'flex' : 'none';
             planetButtons.style.marginTop = '10px'; 
+            
+            // KORREKTUR 4: Border/Padding wiederherstellen
+            planetButtons.style.borderTop = '1px solid #444';
+            planetButtons.style.paddingTop = '10px';
+
 
             document.getElementById('real-scale-sep1').style.display = 'none';
             document.getElementById('real-scale-sep2').style.display = 'none';
@@ -3911,6 +4057,20 @@
             if (humanObjectsCheckbox) {
                 humanObjectsCheckbox.parentElement.style.display = flexStyle;
             }
+            
+            // KORREKTUR 3: Und den Button-Container auch
+            const humanObjectsBtnContainer = document.getElementById('human-objects-focus-buttons');
+            if (humanObjectsBtnContainer) {
+                if (visible) {
+                    // Wenn wir die UI wieder anzeigen (visible = true),
+                    // stelle den Zustand basierend auf der Checkbox wieder her.
+                    humanObjectsBtnContainer.style.display = humanObjectsCheckbox.checked ? 'flex' : 'none';
+                } else {
+                    // Wenn wir die UI verstecken (visible = false),
+                    // blende die Buttons IMMER aus.
+                    humanObjectsBtnContainer.style.display = 'none';
+                }
+            }
 
             document.getElementById('focus-ecliptic').style.display = displayStyle;
             
@@ -3919,6 +4079,8 @@
             document.getElementById('demo-buttons').style.display = flexStyle;
             document.getElementById('moon-phases-group').style.display = displayStyle;
             document.getElementById('play-group').style.display = flexStyle;
+            
+            // KORREKTUR 1: time-controls (Tag/Geschw.) wird versteckt, aber Helligkeit (draussen) nicht.
             document.getElementById('time-controls').style.display = displayStyle;
             
             // --- NEU: Jahreszeiten-Gruppe auch verstecken ---
@@ -4536,7 +4698,21 @@ function jumpToSeason(day, clickedBtn) {
                         
                         // 4. Setze die Neigung (Inklination) relativ zur Erdachse
                         const inclinationRad = (model.data.inclination * Math.PI) / 180;
-                        model.pivot.rotation.x = EARTH_TILT_RAD + inclinationRad;
+                        model.pivot.rotation.y = (day * orbitsPerDay) * Math.PI * 2;
+
+                        
+                        model.pivot.rotation.order = 'ZXY'; // WICHTIG!
+
+                        // 1. Die Neigung der Erdachse (kippt die "Basis" der ISS-Bahn)
+                        model.pivot.rotation.z = EARTH_TILT_RAD; 
+                        
+                        // 2. Die Inklination der ISS *relativ* zur Erd-Äquator-Ebene
+                        model.pivot.rotation.x = inclinationRad; 
+
+                        
+                        const precessionSpeedPerDay = (Math.PI * 2) / 365.25; // 1 volle Drehung pro Jahr
+                        model.pivot.rotation.z += (day * precessionSpeedPerDay);
+                        
                     }
                     // HIER KÖNNTEST DU SPÄTER ANDERE updateTypes hinzufügen (z.B. 'sun_orbit')
                 });
@@ -4887,6 +5063,14 @@ function jumpToSeason(day, clickedBtn) {
             } else if (info.name.includes('Mond')) { 
                  factMap['distance_Mio_km'] = `Abstand zu/r ${info.parentName}`; 
                  factMap['umlaufzeit'] = `Umlaufzeit (${info.parentName})`; 
+            }
+
+            // ISS-LABELS
+            else if (info.name.includes('ISS')|| info.name.includes('Hubble')) {
+                // Hier weisen wir den "missbrauchten" Feldern neue Labels zu
+                factMap['radius_km'] = 'Flughöhe';
+                factMap['umlaufzeit'] = `Umlaufzeit (${info.parentName})`;
+                factMap['taglaenge'] = 'Sonnenaufgänge';
             }
 
             let detailsHTML = ``;
