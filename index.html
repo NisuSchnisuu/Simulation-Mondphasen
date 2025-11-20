@@ -181,28 +181,26 @@
             filter: drop-shadow(0 0 5px rgba(0, 255, 255, 0.8)); 
         }
 
-        /* --- IPAD / MOBILE FIX (Final: Nur UI verschieben) --- */
+        /* --- IPAD / MOBILE FIX (Final) --- */
 
-        /* 1. Standard (Desktop/PC):
-        Hier passiert nichts. Alles bleibt oben auf 10px.
-        */
+        /* 1. Desktop Standard: Alles bleibt oben */
         body.is-fullscreen #ui-container {
-            top: 10px !important;
+            top: 10px !important; 
         }
 
         body.is-fullscreen #fullscreen-btn {
-            top: 10px !important;
+            top: 10px !important; 
         }
 
-        /* 2. Tablet & iPad Regel (Bildschirme kleiner als 1024px Breite) */
+        /* 2. Nur auf Tablets & Handys (Bildschirme kleiner als 1024px) */
         @media (max-width: 1024px) {
             
-            /* Das MENÜ rutscht runter (damit es nicht verdeckt wird) */
+            /* Das Menü rutscht runter (um Platz zu machen oder Konflikte zu vermeiden) */
             body.is-fullscreen #ui-container {
                 top: 60px !important; 
             }
 
-            /* Der BUTTON bleibt oben in der Ecke (an der gleichen Stelle wie vorher) */
+            /* Der Button bleibt aber STUR oben (überschreibt eventuelle andere Regeln) */
             body.is-fullscreen #fullscreen-btn {
                 top: 10px !important; 
             }
