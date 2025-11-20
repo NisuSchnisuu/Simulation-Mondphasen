@@ -1500,7 +1500,7 @@
                 this.timer = 0;
                 
                 // --- EINSTELLUNGEN ---
-                this.TOTAL_FLIGHT_TIME = 60.0; 
+                this.TOTAL_FLIGHT_TIME = 40.0; 
                 this.launchSpeed = 0.5;       
                 this.moonCruiseSpeed = 1.0;   
                 
@@ -1622,6 +1622,18 @@
                 this.visualCapsule.add(this.capsuleEngine);
 
                 scene.add(this.group);
+
+                // TRICK: Shader "Vorwärmen" (Pre-Compile)
+                // Wir machen kurz alles sichtbar, damit die GPU es berechnet,
+                // aber skalieren es auf 0, damit man es nicht sieht.
+                this.meshStage2.visible = true;
+                this.debrisBooster.visible = true;
+                this.debrisStage2.visible = true;
+                this.meshCapsule.visible = true;
+                
+                // Einmal rendern erzwingen (passiert im nächsten Frame automatisch)
+                // Wir verstecken sie sofort wieder im update() beim allerersten Aufruf.
+                this.needsReset = true;
             }
 
             // ... (createSmokeTexture und spawnSmoke und updateSmoke bleiben unverändert) ...
@@ -1811,6 +1823,15 @@
             // -----------------------------------------------
 
             update(deltaTime) {
+
+                if (this.needsReset) {
+                    this.meshStage2.visible = false;
+                    this.debrisBooster.visible = false;
+                    this.debrisStage2.visible = false;
+                    this.meshCapsule.visible = false;
+                    this.needsReset = false;
+                }
+                
                 this.updateSmoke(deltaTime);
 
                 if (this.state === 'ready') { return false; }
@@ -1934,7 +1955,7 @@
                         if (this.hasStaged2) {
                             // PHASE 3: KAPSEL (Draufsicht)
                             targetZ = 0.5;       // Nah an der Kapsel
-                            targetDist = 0.0;    // Fast mittig (kaum seitlicher Versatz)
+                            targetDist = -1.0;    // Fast mittig (kaum seitlicher Versatz)
                             targetHeight = 0.0;  // Hochfahren (Draufsicht von oben)
                             lookAhead = 10.0;    // Blick weit nach vorne -> Mond im Fokus
                             
@@ -1990,7 +2011,7 @@
                         this.meshFull.visible = false;
                         this.meshStage2.visible = true;
                         this.debrisBooster.visible = true; 
-                        for(let k=0; k<15; k++) this.spawnSmoke(false);
+                        for(let k=0; k<5; k++) this.spawnSmoke(false);
                         if (document.getElementById('rocket-status')) document.getElementById('rocket-status').textContent = "Stufentrennung 1 (Booster)";
                     }
                     const STAGE_2_POINT = this.TRANS_LUNAR_INJECTION_START;
@@ -1999,7 +2020,7 @@
                         this.meshStage2.visible = false;
                         this.meshCapsule.visible = true;
                         this.debrisStage2.visible = true; 
-                        for(let k=0; k<20; k++) this.spawnSmoke(true);
+                        for(let k=0; k<8; k++) this.spawnSmoke(true);
                         if (document.getElementById('rocket-status')) document.getElementById('rocket-status').textContent = "TLI - Kapsel separiert";
                     }
                     // ... (Debris Animation Code wie gehabt) ...
