@@ -138,6 +138,27 @@
             padding-bottom: 5px;
         }
 
+        #fullscreen-btn {
+            position: fixed;       /* Fixiert an einer Stelle, egal wie man scrollt */
+            top: 10px;             /* Abstand von oben */
+            right: 10px;           /* Abstand von rechts (die typische Position) */
+            z-index: 1000;         /* Damit er über der 3D-Szene liegt */
+            
+            background: rgba(0, 0, 0, 0.5); /* Halbtransparenter Hintergrund */
+            color: #fff;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 8px;
+            padding: 8px 12px;
+            font-size: 20px;       /* Größe des Icons */
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        #fullscreen-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(1.1); /* Leichter Zoom-Effekt beim Drüberfahren */
+        }
+
         label {
             display: block;
             margin-bottom: 5px;
@@ -787,6 +808,7 @@
     <div id="distance-label">0 Mio. km</div>
 
     <div id="ui-container">
+        <button id="fullscreen-btn" title="Vollbild umschalten">⛶</button>
         <button id="toggle-ui" class="btn btn-secondary" title="Menü verbergen">✕</button>
 
         <div id="ui-fixed-header">
@@ -4407,6 +4429,11 @@
             //  UFO Dialog Listener 
             document.getElementById('ufo-yes-btn').addEventListener('click', () => {
                 
+
+                // --- NEU: BILD ÄNDERN (GLÜCKLICH) ---
+                // Ersetze den Pfad unten mit deinem Bild für das glückliche Alien
+                document.getElementById('ufo-alien-image').src = "ImagesGit/Alien/alien_happy.webp";
+                
                 //  Logik basierend auf Zähler 
                 if (ufoEncounterCount === 0) {
                     document.getElementById('ufo-dialog-text').textContent = "Perfekt. Danke für die Hilfe.";
@@ -4437,6 +4464,10 @@
             });
 
             document.getElementById('ufo-no-btn').addEventListener('click', () => {
+                
+                // --- NEU: BILD ÄNDERN (BÖSE/ENTTÄUSCHT) ---
+                // Ersetze den Pfad unten mit deinem Bild für das enttäuschte Alien
+                document.getElementById('ufo-alien-image').src = "ImagesGit/Alien/alien_angry.webp";
                 
                 //  Logik basierend auf Zähler 
                 if (ufoEncounterCount === 0) {
@@ -4748,6 +4779,9 @@
             document.getElementById('ufo-no-btn').textContent = "Keine Ahnung 🤷‍♂️";
             document.getElementById('ufo-close-btn').textContent = "Kommunikation beenden";
             
+            // --- NEU: BILD ZURÜCKSETZEN ---
+            // Hier muss wieder das Standard-Bild rein (Alien_Nisu.webp)
+            document.getElementById('ufo-alien-image').src = "ImagesGit/Alien/Alien_Nisu.webp";
         }
         
         //  Setzt den Dialogtext basierend auf dem Zähler 
@@ -6804,6 +6838,38 @@
             detailsEl.innerHTML = detailsHTML;
             popup.style.display = 'flex';
         }
+
+        // --- VOLLBILD FUNKTION ---
+        const fullscreenBtn = document.getElementById('fullscreen-btn');
+
+        fullscreenBtn.addEventListener('click', () => {
+            if (!document.fullscreenElement) {
+                // In den Vollbildmodus wechseln
+                document.documentElement.requestFullscreen().catch((err) => {
+                    console.error(`Fehler beim Aktivieren des Vollbildmodus: ${err.message}`);
+                });
+                fullscreenBtn.textContent = "✕"; // Icon zu "Schließen" ändern
+                fullscreenBtn.title = "Vollbild beenden";
+            } else {
+                // Vollbildmodus verlassen
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                }
+                fullscreenBtn.textContent = "⛶"; // Icon zurücksetzen
+                fullscreenBtn.title = "Vollbild aktivieren";
+            }
+        });
+
+        // Event-Listener, falls der Nutzer ESC drückt (damit sich das Icon auch dann zurücksetzt)
+        document.addEventListener('fullscreenchange', () => {
+            if (!document.fullscreenElement) {
+                fullscreenBtn.textContent = "⛶";
+                fullscreenBtn.title = "Vollbild aktivieren";
+            } else {
+                fullscreenBtn.textContent = "✕";
+                fullscreenBtn.title = "Vollbild beenden";
+            }
+        });
 
         init();
     </script>
