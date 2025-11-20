@@ -1937,6 +1937,12 @@
                         this.camButtonVisible = true;
                         const btn = document.getElementById('rocket-cam-btn');
                         if(btn) btn.style.display = 'block';
+
+                        // Automatisch in die Bordkamera schalten!
+                        // Wir prüfen sicherheitshalber, ob sie nicht schon an ist.
+                        if (!this.isOnboardCamera) {
+                            this.toggleOnboardCamera();
+                        }
                     }
 
                     // ---  Bordkamera Logik ---
