@@ -178,6 +178,17 @@
                auch sieht, wenn es über der hellen Sonne liegt */
             filter: drop-shadow(0 0 3px rgba(0,0,0,0.8));
         }
+        
+        /* Greift nur auf Geräten mit Touchscreen (keine Maus) -> iPad/Tablet */
+        @media (hover: none) and (pointer: coarse) {
+            
+            /* Nur wenn JavaScript die Klasse 'is-fullscreen' gesetzt hat 
+               UND das Menü minimiert ist */
+            body.is-fullscreen #ui-container.minimized {
+                top: 60px !important; /* Schiebt das Menü unter den Apple-Button */
+                transition: top 0.3s ease; /* Macht die Bewegung flüssig */
+            }
+        }
 
         label {
             display: block;
@@ -6921,12 +6932,22 @@
         // Event-Listener für alle Browser-Varianten
         ['fullscreenchange', 'webkitfullscreenchange', 'mozfullscreenchange', 'MSFullscreenChange'].forEach(
             eventType => document.addEventListener(eventType, () => {
-                if (!isFullscreen()) {
-                    fullscreenBtn.innerHTML = iconEnter;
-                    fullscreenBtn.title = "Vollbild aktivieren";
-                } else {
+                
+                if (isFullscreen()) {
+                    // --- Vollbild ist AKTIV ---
                     fullscreenBtn.innerHTML = iconExit;
                     fullscreenBtn.title = "Vollbild beenden";
+                    
+                    // WICHTIG: Klasse hinzufügen, damit CSS reagieren kann
+                    document.body.classList.add('is-fullscreen');
+                    
+                } else {
+                    // --- Vollbild ist INAKTIV ---
+                    fullscreenBtn.innerHTML = iconEnter;
+                    fullscreenBtn.title = "Vollbild aktivieren";
+                    
+                    // WICHTIG: Klasse entfernen
+                    document.body.classList.remove('is-fullscreen');
                 }
             })
         );
